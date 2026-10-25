@@ -6,7 +6,7 @@ from typing import List
 import os
 
 from src.cell import Cell
-from src.cell_set import CellSet
+from src.cell_set import CellSet, cache_to_disk
 from src.cell_set_counter import CellSetCounter
 from src.board import Board, board_factory
 from src.game import Game
@@ -65,6 +65,8 @@ if __name__ == '__main__':
 
         if num_game_updates==2:
             break
+
+    cache_to_disk()
 
     # row_cell_set0 = board.rows[0]
     # col_cell_set0 = board.cols[0]

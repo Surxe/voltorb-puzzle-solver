@@ -4,7 +4,7 @@ sys.path.append(".")
 from src.cell import Cell, remove_options
 from src.cell_set_counter import CellSetCounter
 from src.utils import log
-from src.constants import GRID_SIZE, MAX_COIN_VALUE
+from src.constants import GRID_SIZE, MAX_COIN_VALUE, OPTIONS_CACHE
 
 class CellSet:
     # represents 5 core cells and its Counter
@@ -55,7 +55,7 @@ class CellSet:
         for core_cell in unsolved_cells:
             core_cell.update(options_to_remove)
         after = str(self)
-        log(f"CellSet.update() - (v={v},c={c},z={z}) - Before: {before}, After: {after}", do_log=True)
+        log(f"CellSet.update() - (v={v},c={c},z={z}) - Before: {before}, Removed: {options_to_remove}, After: {after}", do_log=True)
         
 
 """
@@ -135,8 +135,6 @@ def _process_new_options(v, c, z):
         
     raise ValueError("idiot")
 
-OPTIONS_CACHE = dict()
-
 def process_new_options(v, c, z):
     """Wrapper for _process_new_options that also caches the input/output and re-uses it"""
     key = f"{v}-{c}-{z}" #flatten
@@ -147,7 +145,8 @@ def process_new_options(v, c, z):
     return result
 
 def process_options_to_remove(v, c, z):
-    new_options = _process_new_options(v, c, z)
+    new_options = process_new_options(v, c, z)
+    log(f"new_options: {new_options}", do_log=True)
     if new_options is None:
         removed_options = all_options
     else:
