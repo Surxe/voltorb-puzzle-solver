@@ -1,4 +1,6 @@
 # Run from repo root, not source
+import sys
+sys.path.append(".")
 
 from typing import List
 import os

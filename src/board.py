@@ -1,3 +1,6 @@
+import sys
+sys.path.append(".")
+
 from src.cell import Cell
 from src.cell_set import CellSet
 from src.cell_set_counter import CellSetCounter

@@ -1,3 +1,6 @@
+import sys
+sys.path.append(".")
+
 from src.utils import spaced_str
 from src.constants import *
 
