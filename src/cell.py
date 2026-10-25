@@ -10,6 +10,8 @@ class Cell:
     def __str__(self):
         options_str = list_to_str(self.options)
         return spaced_str(options_str, LEN_MAX_OPTIONS_AS_STRING)
+    def is_solved(self):
+        return len(self.options) == 1 #solved if only 1 option remains
 
 def remove_options(options, options_removed):
     res = [o for o in options if o not in options_removed]

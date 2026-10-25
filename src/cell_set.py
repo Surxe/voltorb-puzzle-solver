@@ -107,7 +107,7 @@ def process_new_options(v, c, z):
     return result
 
 def cache_to_disk():
-    with open(encoding='utf-8', mode='w', file='output/options_cache.txt') as f:
+    with open(encoding='utf-8', mode='w', file='cache/options.txt') as f:
         for key, options in OPTIONS_CACHE.items():
             f.write(f"{key}: {options}\n")
     
