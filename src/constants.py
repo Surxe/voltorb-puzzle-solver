@@ -6,3 +6,5 @@ TWO = [2]
 THREE = [3]
 LEN_MAX_OPTIONS_AS_STRING = len('0123')
 OUTPUT_DIR = 'output'
+GRID_SIZE = 5 # by 5
+MAX_COIN_VALUE = 8

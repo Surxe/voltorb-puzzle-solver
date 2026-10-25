@@ -2,7 +2,7 @@ import sys
 sys.path.append(".")
 
 from src.utils import *
-from src.cell_set import process_new_options, get_option_decision
+from src.cell_set import process_new_options, get_option_decision, cache_to_disk
 
 path = 'tests/manual_assertions.txt'
 lines_list = []
@@ -20,3 +20,5 @@ for v in range(1, 4):
             assert calculation==expectation
 
             count += 1
+
+cache_to_disk()
