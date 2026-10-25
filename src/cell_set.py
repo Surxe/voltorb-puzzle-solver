@@ -97,11 +97,24 @@ def new_options(v, c, z):
     raise ValueError("idiot")
 
 def get_option_decision(v, c, z):
-    print(f"{v} value across {c} cell(s) with {z} voltorb(s): {new_options(v, c, z)}")
+    return f"{v} value across {c} cell(s) with {z} voltorb(s): {new_options(v, c, z)}"
 
-#get_option_decision(3, 5, 2)
-#get_option_decision(3, 2, 0)
-for v in range(0, 4):
+path = 'manual_assertions.txt'
+lines_list = []
+with open(encoding='utf-8', mode='r', file=path) as lines:
+    for line in lines:
+        lines_list.append(line.strip())
+    
+count = 0
+for v in range(1, 4):
     for c in range(1, 6):
         for z in range(0, c+1):
-            print(f"{v} value across {c} cell(s) with {z} voltorb(s): {new_options(v, c, z)}")
+            calculation = get_option_decision(v, c, z)
+            expectation = lines_list[count].replace(',', ', ')
+            
+            if calculation!=expectation:
+                print(f"calc: [{calculation}]")
+                print(f"expe: [{expectation}]")
+                raise ValueError('idiot2')
+
+            count += 1
