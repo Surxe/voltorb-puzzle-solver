@@ -12,8 +12,10 @@ class Cell:
         return spaced_str(options_str, LEN_MAX_OPTIONS_AS_STRING)
     def is_solved(self):
         return len(self.options) == 1 #solved if only 1 option remains
+    def update(self, options_to_remove):
+        self.options = remove_options(self.options, options_to_remove)
 
-def remove_options(options, options_removed):
-    res = [o for o in options if o not in options_removed]
-    log(f"options: {options}, options_removed: {options_removed}, new_options: {res}")
+def remove_options(options, options_to_remove):
+    res = [o for o in options if o not in options_to_remove]
+    log(f"options: {options}, options_to_remove: {options_to_remove}, new_options: {res}")
     return res

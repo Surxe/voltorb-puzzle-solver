@@ -17,6 +17,24 @@ class CellSet:
             string += str(core_cell) + ' '
         string += str(self.cell_set_counter)
         return string
+    def get_unsolved_core_cells(self):
+        """Returns unsolved core cells"""
+        return [core_cell for core_cell in self.core_cells if not core_cell.is_solved()]
+    
+    def update(self):
+        """
+        For a CellSet with n unsolved cells, v value, and z voltorbs
+            each unsolved cell has options from process_options_to_remove(v, n, z) removed
+        """
+        unsolved_cells = self.get_unsolved_core_cells()
+        options_to_remove = process_options_to_remove(
+            v=self.cell_set_counter.value, 
+            c=len(unsolved_cells), 
+            z=self.cell_set_counter.voltorbs
+        )
+        for core_cell in unsolved_cells:
+            core_cell.update(options_to_remove)
+        
 
 """
 rules:
@@ -106,6 +124,11 @@ def process_new_options(v, c, z):
     OPTIONS_CACHE[key] = result
     return result
 
+def process_options_to_remove(v, c, z):
+    new_options = _process_new_options(v, c, z)
+    removed_options = [option for option in all_options if option not in new_options]
+    return removed_options
+
 def cache_to_disk():
     with open(encoding='utf-8', mode='w', file='cache/options.txt') as f:
         for key, options in OPTIONS_CACHE.items():
@@ -115,7 +138,12 @@ def get_option_decision(v, c, z):
     return f"{v} value across {c} cell(s) with {z} voltorb(s): {process_new_options(v, c, z)}"
 
 if __name__ == '__main__': #for funzies
+    # try all
     for v in range(0, MAX_COIN_VALUE+1):
         for c in range(1, GRID_SIZE+1):
             for z in range(0, c+1):
                 log(get_option_decision(v, c, z), do_log=True)
+
+    remaining_options = process_new_options(3, 5, 2)
+    removed_options = process_options_to_remove(3, 5, 2)
+    print(f"remaining_options: {remaining_options}, removed_options: {removed_options}")

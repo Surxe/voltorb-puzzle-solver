@@ -10,6 +10,7 @@ from src.cell_set import CellSet
 from src.cell_set_counter import CellSetCounter
 from src.board import Board, board_factory
 from src.constants import *
+from src.utils import log
     
 def init_state() -> Board:
     return board_factory([
@@ -28,3 +29,8 @@ if __name__ == '__main__':
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     with open(encoding='utf-8', mode='w', file=path) as f:
         f.write(str(board))
+
+    cell_set0 = board.rows[0]
+    log(f"cell_set0 before: {cell_set0}", do_log=True)
+    cell_set0.update()
+    log(f"cell_set0 after : {cell_set0}", do_log=True)
