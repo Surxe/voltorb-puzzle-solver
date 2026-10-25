@@ -27,13 +27,14 @@
         <div class="line col-line" style="--n: {{ n }}; --color: {{ colors[n % colors | length] }}"></div>
         {% endfor %}
 
-        {#- Cards come first so, once a batch of flips is marked, Tab walks those inputs before the counters. -#}
+        {#- solver.js decides what Tab cycles through in each phase -#}
         {% for i in range(size) %}{% for j in range(size) %}
         <div class="tile" data-i="{{ i }}" data-j="{{ j }}" style="grid-row: {{ i + 1 }}; grid-column: {{ j + 1 }}">
           <img class="face" src="{{ url_for('static', filename='sprites/card_back.png') }}" alt="">
           {% for k in range(4) %}<img class="memo memo-{{ k }}" src="{{ url_for('static', filename='sprites/memo_%d.png' % k) }}" alt="">{% endfor %}
           <span class="odds"></span>
           <img class="cursor" src="{{ url_for('static', filename='sprites/cursor.png') }}" alt="">
+          <img class="cursor focus-cursor" src="{{ url_for('static', filename='sprites/cursor_focus.png') }}" alt="">
           <input class="flip" inputmode="numeric" maxlength="1" autocomplete="off" disabled
                  aria-label="Row {{ i + 1 }} column {{ j + 1 }}: what the card showed (0 for a Voltorb)">
         </div>
@@ -57,7 +58,7 @@
       <nav class="menu" aria-label="Actions">
         {% for k in range(3) %}<button type="button" class="action"></button>{% endfor %}
       </nav>
-      <p class="hint">Tab: next box. Enter: submit.<br>Corner marks: what a card can still be. Middle: its Voltorb chance. Click a face-down card to enter a flip yourself.</p>
+      <p class="hint">Tab: next box (only the ones that need you). Enter: submit.<br>Corner marks: what a card can still be. Middle: its Voltorb chance. Click a face-down card to enter a flip yourself.</p>
     </aside>
   </main>
   <script src="{{ url_for('static', filename='solver.js') }}"></script>

@@ -56,7 +56,12 @@
     sanitize(levelInput, 8);
     if (levelInput.value === '0') levelInput.value = '';
   });
-  $$('input').forEach((input) => input.addEventListener('focus', () => input.select()));
+  for (const element of $$('input, button')) {
+    element.addEventListener('focus', () => {
+      if (element instanceof HTMLInputElement) element.select();
+      element.scrollIntoView({ block: 'nearest', inline: 'nearest' }); // never leave the selection off screen
+    });
+  }
 
   const flipInput = (tile) => $('.flip', tile);
   const face = (tile) => $('.face', tile);
@@ -73,6 +78,7 @@
       if (!tile.classList.contains('pending')) {
         setPending(tile, true);
         tile.classList.add('manual');
+        updateTabOrder();
       }
       input.focus();
     });
@@ -111,6 +117,34 @@
       button.textContent = action ? action.label : '';
       button.title = action?.title ?? '';
     });
+    updateTabOrder(); // every phase change ends by setting the menu
+  }
+
+  // ---------- keyboard focus: Tab only cycles through what the current phase needs ----------
+
+  const counterInputs = [...rows, ...cols].flatMap(({ value, voltorbs }) => [value, voltorbs]);
+
+  // the counters to start, then each batch of cards to flip, then the menu once the round is over
+  function focusables() {
+    if (phase === 'counts') return counterInputs;
+    if (phase === 'flip') return pendingTiles().map(flipInput);
+    return actionButtons.filter((button) => !button.disabled);
+  }
+
+  // anything else can still be clicked, but Tab skips it
+  function updateTabOrder() {
+    const order = new Set(focusables());
+    for (const element of [...counterInputs, ...allTiles.map(flipInput), ...actionButtons, levelInput]) {
+      element.tabIndex = order.has(element) ? 0 : -1;
+    }
+  }
+
+  function cycleFocus(backwards) {
+    const order = focusables();
+    if (!order.length) return;
+    const at = order.indexOf(document.activeElement);
+    const next = at === -1 ? (backwards ? order.length - 1 : 0) : (at + (backwards ? -1 : 1) + order.length) % order.length;
+    order[next].focus();
   }
 
   // a chance that's only nearly certain shouldn't round to one that is
@@ -319,9 +353,13 @@
   }
 
   document.addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter' || event.target instanceof HTMLButtonElement) return;
-    event.preventDefault();
-    submit();
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      cycleFocus(event.shiftKey);
+    } else if (event.key === 'Enter' && !(event.target instanceof HTMLButtonElement)) {
+      event.preventDefault();
+      submit();
+    }
   });
 
   // ---------- fit the app to the window at a whole-number zoom ----------

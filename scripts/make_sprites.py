@@ -146,6 +146,13 @@ def cursor() -> Canvas:
     canvas.frame(1, 1, 28, 28, CURSOR, thickness=2)
     return canvas
 
+def focus_cursor() -> Canvas:
+    """The frame around the card being typed into"""
+    canvas = Canvas(30, 30)
+    canvas.frame(0, 0, 30, 30, INK)
+    canvas.frame(1, 1, 28, 28, MEMO, thickness=2)
+    return canvas
+
 def favicon() -> Canvas:
     canvas = Canvas(32, 32)
     canvas.paste(bomb(32), 0, 0)
@@ -156,6 +163,7 @@ SPRITES = {
     **{f'card_{value}': (lambda value=value: card_face(value)) for value in range(4)},
     **{f'memo_{value}': (lambda value=value: memo(value)) for value in range(4)},
     'cursor': cursor,
+    'cursor_focus': focus_cursor,
     'bomb_small': lambda: bomb(10),
     'favicon': favicon,
 }

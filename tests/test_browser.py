@@ -74,14 +74,72 @@ def message(page):
 def coins(page, id):
     return int(page.inner_text(f'#{id}'))
 
-def test_tab_order_walks_rows_then_columns(page):
-    labels = []
+def focused(page):
+    return page.evaluate('document.activeElement.getAttribute("aria-label") || document.activeElement.textContent')
+
+def tab_cycle(page, presses, key='Tab'):
+    """What gets focus over a run of key presses, starting with what has it now"""
+    seen = [focused(page)]
+    for _ in range(presses):
+        page.keyboard.press(key)
+        seen.append(focused(page))
+    return seen
+
+def assert_unobscured(page):
+    """The focused element is on screen and is what a click at its center would hit"""
+    hit = page.evaluate("""() => {
+        const element = document.activeElement, box = element.getBoundingClientRect();
+        const x = box.left + box.width / 2, y = box.top + box.height / 2;
+        return x >= 0 && y >= 0 && x <= innerWidth && y <= innerHeight && document.elementFromPoint(x, y) === element;
+    }""")
+    assert hit, f'{focused(page)} is off screen or covered'
+
+def test_tab_cycles_only_the_counters_at_the_start(page):
+    seen = tab_cycle(page, 21)
+    assert seen[:4] == ['Row 1 points', 'Row 1 Voltorbs', 'Row 2 points', 'Row 2 Voltorbs']
+    assert seen[10:12] == ['Column 1 points', 'Column 1 Voltorbs']
+    assert seen[19] == 'Column 5 Voltorbs'
+    assert seen[20:] == ['Row 1 points', 'Row 1 Voltorbs'] # wraps instead of leaving for the menu or cards
+    assert tab_cycle(page, 2, 'Shift+Tab')[1:] == ['Row 1 points', 'Column 5 Voltorbs']
+
+def test_tab_cycles_only_the_cards_to_flip(page, game1):
+    rows, cols, answer = game1
+    enter_counts(page, rows, cols)
+    submit(page)
+    flips = pending(page)
+    labels = [f'Row {i + 1} column {j + 1}: what the card showed (0 for a Voltorb)' for i, j in flips]
+    assert tab_cycle(page, len(flips)) == labels + labels[:1]
+    type_flips(page, answer, flips)
+    submit(page)
+    flips = pending(page)
+    labels = [f'Row {i + 1} column {j + 1}: what the card showed (0 for a Voltorb)' for i, j in flips]
+    assert tab_cycle(page, len(flips)) == labels + labels[:1]
+    # a card clicked by hand joins the cycle
+    page.click('.tile[data-i="0"][data-j="4"]')
+    assert 'Row 1 column 5: what the card showed (0 for a Voltorb)' in tab_cycle(page, len(flips) + 1)
+
+def test_tab_cycles_only_the_menu_once_the_round_is_over(page, game1):
+    rows, cols, answer = game1
+    enter_counts(page, rows, cols)
+    submit(page)
+    while flips := pending(page):
+        type_flips(page, answer, flips)
+        submit(page)
+    assert tab_cycle(page, 2) == ['New game', 'Back', 'New game']
+
+def test_what_has_focus_is_never_hidden(page, game1):
+    rows, cols, answer = game1
     for _ in range(20):
-        labels.append(page.evaluate('document.activeElement.getAttribute("aria-label")'))
+        assert_unobscured(page)
+        assert page.evaluate('getComputedStyle(document.activeElement).backgroundColor') == 'rgb(255, 216, 74)' # gold
         page.keyboard.press('Tab')
-    assert labels[:4] == ['Row 1 points', 'Row 1 Voltorbs', 'Row 2 points', 'Row 2 Voltorbs']
-    assert labels[10:12] == ['Column 1 points', 'Column 1 Voltorbs']
-    assert labels[-1] == 'Column 5 Voltorbs'
+    enter_counts(page, rows, cols)
+    submit(page)
+    for _ in pending(page):
+        assert_unobscured(page)
+        tile = page.evaluate_handle('document.activeElement.parentElement')
+        assert tile.evaluate('t => getComputedStyle(t.querySelector(".focus-cursor")).display') == 'block'
+        page.keyboard.press('Tab')
 
 def test_counters_keep_only_what_fits(page):
     page.keyboard.type('17') # a row holds at most 15 points

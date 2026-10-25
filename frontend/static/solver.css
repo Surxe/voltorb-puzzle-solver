@@ -126,10 +126,13 @@ input {
 }
 .tile.previewing .odds, .tile.revealed .odds { display: none; }
 
+/* red: a card to flip; gold: the one being typed into. Raised so neither is drawn under a neighbor. */
+.tile.pending { z-index: 1; }
+.tile.pending:focus-within { z-index: 2; }
 .tile .cursor { left: -3px; top: -3px; display: none; pointer-events: none; }
-.tile.pending .cursor { display: block; }
-.tile.pending:focus-within .cursor { animation: blink 0.9s steps(2, jump-none) infinite; }
-@keyframes blink { 50% { opacity: 0.35; } }
+.tile.pending .cursor:not(.focus-cursor) { display: block; }
+.tile.pending:focus-within .cursor:not(.focus-cursor) { display: none; }
+.tile.pending:focus-within .focus-cursor { display: block; }
 
 /* what's typed shows as the card face, so the input itself stays invisible */
 .tile .flip { left: 0; top: 0; width: var(--card); height: var(--card); color: transparent; caret-color: transparent; cursor: text; }
@@ -149,7 +152,9 @@ input {
 .counter::after { content: ''; position: absolute; left: 0; right: 0; top: 10px; height: 1px; background: var(--light); }
 .counter > * { position: absolute; }
 .count { height: 9px; line-height: 9px; text-align: right; }
-.count:focus { outline: 1px solid var(--cursor); }
+/* the box being typed into turns gold, ringed in ink, above the panel's divider */
+.count:focus { z-index: 1; background: var(--gold); box-shadow: 0 0 0 1px var(--ink); }
+.count::selection { background: var(--ink); color: var(--gold); }
 .count.value { left: 1px; top: 1px; width: 20px; }
 .count.voltorbs { left: 12px; top: 12px; width: 9px; }
 .counter .bomb { left: 1px; top: 11px; }
@@ -185,7 +190,8 @@ input {
   color: var(--ink);
   cursor: pointer;
 }
-.action:enabled:hover, .action:focus-visible { border-color: var(--cursor); outline: none; }
+.action:enabled:hover { border-color: var(--cursor); }
+.action:focus { outline: none; border-color: var(--cursor); background: var(--gold); }
 .action:disabled { background: #6aa583; box-shadow: none; cursor: default; }
 
 .hint { margin: 0; color: #bfe3cd; }
