@@ -78,9 +78,7 @@ class Game:
         return prod(revealed) if revealed else 0
 
     def recommend(self, do_log=False) -> Recommendation:
-        """The next batch of cards to flip; empty once the round is over"""
-        if self.status is Status.LOST:
-            return Recommendation()
+        """The next batch of cards to flip; empty once the round is over (the board is still narrowed, to show it)"""
         self.update(do_log=do_log)
         if self.status is not Status.PLAYING:
             return Recommendation()

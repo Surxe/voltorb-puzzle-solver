@@ -171,28 +171,35 @@
       if (error instanceof InputError) return say(error.message, error.input);
       throw error;
     }
-    busy = true;
-    let response;
+    setBusy(true);
     try {
-      const reply = await fetch('api/solve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...counts, revealed: nextRevealed, level: levelInput.value ? Number(levelInput.value) : null }),
-      });
-      response = await reply.json();
-    } catch (error) {
-      return say(`Couldn't reach the solver: ${error.message}`);
+      let response;
+      try {
+        const reply = await fetch('api/solve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...counts, revealed: nextRevealed, level: levelInput.value ? Number(levelInput.value) : null }),
+        });
+        response = await reply.json();
+      } catch (error) {
+        return say(`Couldn't reach the solver: ${error.message}`);
+      }
+      if (response.error) {
+        return say(`No board fits that.\n${response.error}.\nCheck the counters and flips for a typo.`);
+      }
+      if (nextRevealed !== revealed) {
+        history.push(revealed);
+        revealed = nextRevealed;
+      }
+      render(response);
     } finally {
-      busy = false;
+      setBusy(false);
     }
-    if (response.error) {
-      return say(`No board fits that.\n${response.error}.\nCheck the counters and flips for a typo.`);
-    }
-    if (nextRevealed !== revealed) {
-      history.push(revealed);
-      revealed = nextRevealed;
-    }
-    render(response);
+  }
+
+  function setBusy(on) {
+    busy = on;
+    app.setAttribute('aria-busy', String(on));
   }
 
   function render(response) {

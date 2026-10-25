@@ -12,7 +12,7 @@
   <p class="missing">Game sprites are missing: run <code>python scripts/fetch_assets.py</code> and reload.</p>
   {% endif %}
   {#- Positions are in DS pixels (the background sprite is 262x399); the whole app is zoomed by an integer factor. -#}
-  <main id="app" data-size="{{ size }}" data-assets="{{ url_for('static', filename='game/') }}">
+  <main id="app" aria-busy="false" data-size="{{ size }}" data-assets="{{ url_for('static', filename='game/') }}">
     <section class="ds" aria-label="Voltorb Flip board">
       <img class="screen" src="{{ url_for('static', filename='game/background.png') }}" alt="">
 

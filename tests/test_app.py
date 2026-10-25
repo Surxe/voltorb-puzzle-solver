@@ -41,6 +41,7 @@ def test_flipping_a_voltorb_loses(client, game1):
     revealed[0][0] = 0
     data = client.post('/api/solve', json=body(rows, cols, revealed)).get_json()
     assert data['status'] == 'lost' and data['coins'] == 0 and data['recommendation']['flips'] == []
+    assert data['cells'][0][4]['options'] == [1] # the rest of the board is still narrowed
 
 def test_impossible_flip_is_a_422(client, game1):
     rows, cols, _ = game1
