@@ -47,6 +47,25 @@ class CellSet:
             for option in core_cell.options:
                 distinct.add(option)
         return list(distinct)
+
+    def get_count_of_options(self):
+        """
+        Returns the # of each option that are present somewhere in the core cells
+        Given:
+            cells: [0,1], [2], [2,1]
+        Returns: {
+            0: 1,
+            1: 2,
+            2: 2
+        }
+        """
+        result = dict()
+        for option in self.current_options():
+            result[option] = 0
+            for cell in self.core_cells:
+                if option in cell.options:
+                    result[option] += 1
+        return result
     
     def update(self):
         """
@@ -58,6 +77,21 @@ class CellSet:
         v = self.cell_set_counter.value - self.get_current_value_in_play()
         c = len(unsolved_cells)
         z = self.cell_set_counter.voltorbs - self.get_num_voltorbs_in_play()
+        if v<0:
+            return
+
+        # First, a CellSet wide check
+        count_of_options = self.get_count_of_options()
+        for option in self.current_options():
+            min_number_of_m_option = min_count_of_max(v, c, option)
+            if min_number_of_m_option == count_of_options[option]: #at least two 2's must exist and there are only 2 possible locations
+                # therefore both spots should have options set to [2]
+                for cell in self.core_cells:
+                    if option in cell.options:
+                        cell.set([option])
+                        log(f"set to option: {option}", do_log=True)
+                
+
         options_to_remove = process_options_to_remove(
             v=v, 
             c=c,
@@ -69,6 +103,13 @@ class CellSet:
         after = str(self)
         log(f"CellSet.update() - (v={v},c={c},z={z}) - Before: {before}, Removed: {options_to_remove}, After: {after}", do_log=True)
         
+
+def min_count_of_max(v, c, m):
+    """
+    Given v value that must be shared across c cells, returns the number of minimum m's
+    that must be in the solution
+    """
+    return max(0, v - c * (m - 1))
 
 """
 rules:
@@ -97,6 +138,7 @@ def _process_new_options(v, c, z, set_options):
         return None
     if v==c and z==0:
         return [1]
+
     if set_options is None:
         return None
 
@@ -158,7 +200,7 @@ def process_new_options(v, c, z, set_options):
 
 def process_options_to_remove(v, c, z, set_options):
     new_options = process_new_options(v, c, z, set_options)
-    log(f"new_options: {new_options}", do_log=True)
+    #log(f"new_options: {new_options}", do_log=True)
     if new_options is None:
         removed_options = set_options
     else:
@@ -170,16 +212,17 @@ def cache_to_disk():
         for key, options in OPTIONS_CACHE.items():
             f.write(f"{key}: {options}\n")
     
-def get_option_decision(v, c, z):
-    return f"{v} value across {c} cell(s) with {z} voltorb(s): {process_new_options(v, c, z, [0,1,2,3])}"
+def get_option_decision(v, c, z, set_options):
+    return f"{v} value across {c} cell(s) with {z} voltorb(s): {process_new_options(v, c, z, set_options)}"
 
 if __name__ == '__main__': #for funzies
     # try all
-    for v in range(0, MAX_COIN_VALUE+1):
-        for c in range(1, GRID_SIZE+1):
-            for z in range(0, c+1):
-                log(get_option_decision(v, c, z), do_log=True)
-    set_options=[0,1,2,3]
-    remaining_options = process_new_options(3, 5, 2, set_options)
-    removed_options = process_options_to_remove(3, 5, 2, set_options)
+    # for v in range(0, MAX_COIN_VALUE+1):
+    #     for c in range(1, GRID_SIZE+1):
+    #         for z in range(0, c+1):
+    #             log(get_option_decision(v, c, z), do_log=True)
+    set_options=[0,1,2]
+    # 4, 2, 0 [0,1,2] -> [2] correctly
+    remaining_options = process_new_options(6, 4, 0, set_options)
+    removed_options = process_options_to_remove(6, 4, 0, set_options)
     print(f"remaining_options: {remaining_options}, removed_options: {removed_options}")
