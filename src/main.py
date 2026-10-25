@@ -3,11 +3,11 @@
 from typing import List
 import os
 
-from cell import Cell
-from cell_set import CellSet
-from cell_set_counter import CellSetCounter
-from board import Board, board_factory
-from constants import *
+from src.cell import Cell
+from src.cell_set import CellSet
+from src.cell_set_counter import CellSetCounter
+from src.board import Board, board_factory
+from src.constants import *
     
 def init_state() -> Board:
     return board_factory([

@@ -12,4 +12,3 @@ def spaced_str(str, min_len):
 def log(msg, do_log=False):
     if do_log:
         print(msg)
-    

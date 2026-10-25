@@ -1,6 +1,6 @@
-from cell import Cell
-from cell_set import CellSet
-from cell_set_counter import CellSetCounter
+from src.cell import Cell
+from src.cell_set import CellSet
+from src.cell_set_counter import CellSetCounter
 
 class Board:
     def __init__(self, _row_cell_sets: list[CellSet], _col_cell_sets: list[CellSet]):

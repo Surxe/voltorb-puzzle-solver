@@ -1,5 +1,5 @@
-from utils import spaced_str
-from constants import *
+from src.utils import spaced_str
+from src.constants import *
 
 class CellSetCounter:
     # represents the sum value & voltorbs of either a row or a column

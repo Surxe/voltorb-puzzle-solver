@@ -1,6 +1,6 @@
-from cell import Cell, remove_options
-from cell_set_counter import CellSetCounter
-from utils import log
+from src.cell import Cell, remove_options
+from src.cell_set_counter import CellSetCounter
+from src.utils import log
 
 class CellSet:
     # represents 5 core cells and its Counter
@@ -32,9 +32,7 @@ These rules can definitely be derived formulaicly but I'm not there yet
 """
 all_options = [0,1,2,3]
 all_options_reverse = [3,2,1,0]
-# 2 value across 1 cell(s) with 0 voltorb(s): [2]
-# 2 value across 2 cell(s) with 0 voltorb(s): [1]
-def new_options(v, c, z):
+def process_new_options(v, c, z):
     if v < 0:
         return None
     if v==0:
@@ -58,14 +56,11 @@ def new_options(v, c, z):
         if diff > v:
             return None
 
-        
-# 3, 3, 0
-
         # 3 value across 5 cell(s) with 4 voltorb(s): 3 NOT 0,1,2
         #return [0] + new_options(v, diff, 0)
         if z != 0:
             log(f"z!=0")
-            potential_new_options = new_options(v, diff, 0)
+            potential_new_options = process_new_options(v, diff, 0)
             if potential_new_options is not None:
                 return list(set([0] + potential_new_options))
         
@@ -80,7 +75,7 @@ def new_options(v, c, z):
             # 0 value across 1 cell(s)s with 0 voltorb(s): [0]
             # 1 value across 1 cell with 0
             log(f"trying value {v2} across {c2} cells with {z} voltorbs")
-            potential_new_options = new_options(v2, c2, z)
+            potential_new_options = process_new_options(v2, c2, z)
             # returns a 0 therefore this_option is not possible
             log(f"current options {my_options}")
             if potential_new_options is None or 0 in potential_new_options:
@@ -97,24 +92,4 @@ def new_options(v, c, z):
     raise ValueError("idiot")
 
 def get_option_decision(v, c, z):
-    return f"{v} value across {c} cell(s) with {z} voltorb(s): {new_options(v, c, z)}"
-
-path = 'manual_assertions.txt'
-lines_list = []
-with open(encoding='utf-8', mode='r', file=path) as lines:
-    for line in lines:
-        lines_list.append(line.strip())
-    
-count = 0
-for v in range(1, 4):
-    for c in range(1, 6):
-        for z in range(0, c+1):
-            calculation = get_option_decision(v, c, z)
-            expectation = lines_list[count].replace(',', ', ')
-            
-            if calculation!=expectation:
-                print(f"calc: [{calculation}]")
-                print(f"expe: [{expectation}]")
-                raise ValueError('idiot2')
-
-            count += 1
+    return f"{v} value across {c} cell(s) with {z} voltorb(s): {process_new_options(v, c, z)}"

@@ -1,5 +1,5 @@
-from utils import list_to_str, spaced_str, log
-from constants import *
+from src.utils import list_to_str, spaced_str, log
+from src.constants import *
 
 class Cell:
     def __init__(self, options: list[int]):
