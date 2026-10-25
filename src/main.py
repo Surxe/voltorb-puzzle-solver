@@ -24,13 +24,26 @@ def init_state() -> Board:
 
 if __name__ == '__main__':
     board = init_state()
-    print(board)
+    board_str = str(board)
+    print(board_str)
     path = os.path.join(OUTPUT_DIR, 'board_state.txt')
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     with open(encoding='utf-8', mode='w', file=path) as f:
-        f.write(str(board))
+        f.write(board_str)
 
-    cell_set0 = board.rows[0]
-    log(f"cell_set0 before: {cell_set0}", do_log=True)
-    cell_set0.update()
-    log(f"cell_set0 after : {cell_set0}", do_log=True)
+    
+
+    row_cell_set0 = board.rows[0]
+    col_cell_set0 = board.cols[0]
+
+    log(f"row_cell_set0 before: {row_cell_set0}", do_log=True)
+    log(f"col_cell_set0 before: {col_cell_set0}", do_log=True)
+
+    row_cell_set0.update()
+
+    log(f"row_cell_set0 after : {row_cell_set0}", do_log=True)
+    #this should have its first cell updated by rows[0] being updated because it overlaps
+    log(f"col_cell_set0 after : {col_cell_set0}", do_log=True)
+
+    # row_cell_set0.update()
+    # log(f"row_cell_set0 after : {row_cell_set0}", do_log=True)
