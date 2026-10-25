@@ -92,8 +92,8 @@ the solver recommends. Results from 2000 boards per level (±2% at 95% confidenc
 | 7 | 26.1% | 25.8% | 25.1% | 95.3% | 4.22 |
 | 8 | 29.1% | 28.7% | 26.5% | 95.1% | 4.16 |
 
-The level tables only re-rank guesses, so they move the win rate by about 0-3 points. Nearly all of
-each loss comes from boards where the counters leave a real coin toss.
+The level tables only re-rank guesses, so they move the win rate by about 0-3 points. Every loss is
+a forced guess that hit a Voltorb.
 
 ```bash
 python scripts/win_odds.py --boards 2000   # about 5 minutes on 16 cores
