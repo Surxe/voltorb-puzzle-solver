@@ -5,7 +5,7 @@ from backend.analysis import BoardOdds, analyze
 from backend.board import Board, Counts, board_from_counts
 from backend.constants import VOLTORB
 from backend.errors import Contradiction
-from backend.levels import TRACKED, level_weights
+from backend.levels import LEVELS, TRACKED, BoardConfig, level_weights
 from backend.strategy import Recommendation, SafeFirst, Strategy, candidates
 
 class Status(Enum):
@@ -16,12 +16,14 @@ class Status(Enum):
 class Game:
     """
     One round: flip results go in through reveal(), and recommend() narrows the board and says what to flip next.
-    use_levels weighs guesses by the game's level configurations; certainties never depend on them.
+    Guesses are weighed by how likely the configurations in levels are to deal each board (None just counts boards);
+    certainties never depend on them.
     """
-    def __init__(self, current_board: Board, strategy: Strategy | None = None, use_levels=True):
+    def __init__(self, current_board: Board, strategy: Strategy | None = None,
+                 levels: list[list[BoardConfig]] | None = LEVELS):
         self.current_board = current_board
         self.strategy = strategy or SafeFirst()
-        self.use_levels = use_levels
+        self.levels = levels
         self.certain: BoardOdds | None = None
         self.likely: BoardOdds | None = None
 
@@ -52,9 +54,9 @@ class Game:
         self.certain = analyze(self.current_board)
         self.certain.narrow(self.current_board)
         self.likely = self.certain
-        if self.use_levels:
+        if self.levels:
             voltorbs = sum(row.cell_set_counter.voltorbs for row in self.current_board.rows)
-            weights = level_weights(voltorbs, self.current_board.size)
+            weights = level_weights(voltorbs, self.current_board.size, self.levels)
             try:
                 self.likely = analyze(self.current_board, TRACKED, weights) if weights else self.certain
             except Contradiction: # a board the level tables don't cover, so just count boards
