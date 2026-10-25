@@ -21,10 +21,11 @@ the checked-in PNGs fall out of date. The pixel font is [Silkscreen](https://git
 ```bash
 python -m frontend.app    # http://127.0.0.1:5000
 ```
-1. Type each row's points and Voltorbs, then each column's. **Tab** moves to the next box and **Enter**
-   solves. Optionally put the level shown in game in the `Lv.` box.
-2. The cards to flip get the red cursor. Flip them in game and type what each showed (`1`-`3`, or `0`
-   for a Voltorb), then press **Enter** for the next batch.
+1. Type each row's points and Voltorbs, then each column's. **Tab** cycles through just those 20 boxes,
+   and **Enter** solves. Optionally put the level shown in game in the `Lv.` box.
+2. The cards to flip get a red frame. Flip them in game and type what each showed (`1`-`3`, or `0`
+   for a Voltorb), then press **Enter** for the next batch. **Tab** cycles through just those cards.
+   The box or card you're typing into is gold.
 3. If no card is certainly safe, the solver marks the single card least likely to be a Voltorb and shows
    the risk. See [Why it sometimes guesses](#why-it-sometimes-guesses).
 
@@ -48,7 +49,7 @@ Each layer only narrows what the layer before left open:
 | Line | `backend/cell_set.py` | `CellSet.update()` keeps the options that appear in at least one arrangement matching the row or column counter (`supported_options`). That covers the "a 3 and a 1 or a 2 and a 2, but no 3's, so 2 and 2" case. `process_new_options(v, c, z, set_options)` is the same rule for c alike cells. |
 | Board | `backend/board.py` | `Board.update()` repeats every row and column update until nothing changes. Rows and columns share `Cell`s, so narrowing in one line is seen by the lines crossing it. |
 | Whole boards | `backend/analysis.py` | `analyze()` counts every complete board that fits all counters and flips. It goes row by row, tracking what each column still needs, and memoizes, so it takes milliseconds. The result is exact per-cell odds, plus deductions no single line can see. |
-| Level tables | `backend/levels.py` | The game deals each level from 5 fixed (2's, 3's, Voltorbs) configs. `level_weights()` weighs each matching board by how likely the game is to deal it. This only ranks guesses: a card is called safe only when no matching board puts a Voltorb there. |
+| Level tables | `backend/levels.py` | How the game deals boards, from the [pokeheartgold decompilation](https://github.com/pret/pokeheartgold/blob/6988158691eb6178cff697cda0428045ddcba5fb/src/voltorb_flip/voltorb_flip_game.c). Each level picks one of 10 configs (Voltorbs, 2's, 3's) at random. The game re-deals any board with too many free 2's and 3's, meaning ones in a row or column with no Voltorbs. `level_weights()` weighs each matching board by how likely the game is to deal it. This only ranks guesses: a card is called safe only when no matching board puts a Voltorb there. |
 | Strategy | `backend/strategy.py` | `SafeFirst` flips every surely-safe card that could still be a 2 or 3, all in one batch. With none left, it guesses the card least likely to be a Voltorb. `Strategy` is a protocol, so other strategies can be swapped in. |
 | Game | `backend/game.py` | `Game` holds a round: `reveal()` takes a flip result, `recommend()` gives the next batch, and `snapshot()` returns the state as JSON. |
 
@@ -73,9 +74,30 @@ and each of its four cards is a Voltorb in one of the two boards. That's a 50/50
 (`tests/test_guessing.py`).
 
 How often this happens doesn't depend on the order of safe flips: flipping every surely-safe card
-always reaches the same point. On random boards dealt from the level tables, about 45% of Lv. 1
-boards and 94% of Lv. 7-8 boards force at least one guess. Treating the level tables as hard rules
-only lowers that by 0-2 points.
+always reaches the same point. On boards dealt the way the game deals them, 60% of Lv. 1 boards and
+95% of Lv. 7-8 boards force at least one guess (table below).
+
+## Win odds
+`scripts/win_odds.py` deals boards the way the game does and plays each one by flipping exactly what
+the solver recommends. Results from 2000 boards per level (±2% at 95% confidence):
+
+| Level | Win, Lv. entered | Win, Lv. blank | Win, no level tables | Boards that need a guess | Guesses per board |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 82.3% | 82.3% | 82.5% | 60.0% | 0.97 |
+| 2 | 66.3% | 66.3% | 67.0% | 81.7% | 2.09 |
+| 3 | 54.5% | 54.5% | 53.8% | 88.8% | 2.91 |
+| 4 | 46.5% | 46.1% | 45.0% | 91.8% | 3.28 |
+| 5 | 36.0% | 35.8% | 34.9% | 94.2% | 3.87 |
+| 6 | 35.4% | 35.0% | 35.0% | 93.3% | 3.70 |
+| 7 | 26.1% | 25.8% | 25.1% | 95.3% | 4.22 |
+| 8 | 29.1% | 28.7% | 26.5% | 95.1% | 4.16 |
+
+The level tables only re-rank guesses, so they move the win rate by about 0-3 points. Nearly all of
+each loss comes from boards where the counters leave a real coin toss.
+
+```bash
+python scripts/win_odds.py --boards 2000   # about 5 minutes on 16 cores
+```
 
 ## Tests
 ```bash
