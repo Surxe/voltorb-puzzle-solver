@@ -1,22 +1,34 @@
 """
-Terminal solver. Run from repo root:
-    python -m backend.main input/game1.txt                                  # prompts for each flip result
-    python -m backend.main input/game1.txt --answer input/game1_answer.txt  # plays itself against the answer
+Terminal solver, for when the web UI isn't handy. Run from repo root:
+    python -m backend.main [--level N]
+Prompts for each row's then each column's counter, then for every card it says to flip.
 """
 import argparse
 import os
 
-from backend.constants import OUTPUT_DIR
+from backend.constants import GRID_SIZE, OUTPUT_DIR
 from backend.game import Game
-from backend.game_file import load_answer, load_counts
 from backend.levels import LEVELS
-from backend.simulate import play
 
 def describe(recommendation) -> str:
     cards = ', '.join(f"({i},{j})" for i, j in recommendation.flips)
     if recommendation.safe:
         return f"flip {cards}"
     return f"no safe card left; guess {cards} ({recommendation.risk:.0%} voltorb risk)"
+
+def parse_counter(text: str) -> tuple[int, int]:
+    """'5,1' or '5 1' -> (5, 1)"""
+    value, voltorbs = (int(n) for n in text.replace(',', ' ').split())
+    if not (0 <= voltorbs <= GRID_SIZE and 0 <= value <= 3 * GRID_SIZE):
+        raise ValueError(text)
+    return value, voltorbs
+
+def ask_counter(name) -> tuple[int, int]:
+    while True:
+        try:
+            return parse_counter(input(f"{name} (value,voltorbs): "))
+        except ValueError:
+            print("  e.g. 5,1")
 
 def ask_result(i, j) -> int | None:
     while True:
@@ -50,21 +62,14 @@ def write_board_state(game: Game):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Voltorb Flip solver")
-    parser.add_argument('counts', help="game file of row and column counters, e.g. input/game1.txt")
-    parser.add_argument('--answer', help="answer file to play against instead of prompting for flips")
     parser.add_argument('--level', type=int, choices=range(1, len(LEVELS) + 1), help="the Lv. shown in game, to weigh guesses by")
     parser.add_argument('--no-levels', action='store_true', help="don't weigh guesses by the game's level tables")
     args = parser.parse_args()
 
     levels = None if args.no_levels else [LEVELS[args.level - 1]] if args.level else LEVELS
-    game = Game.from_counts(*load_counts(args.counts), levels=levels)
-    if args.answer:
-        playthrough = play(game, load_answer(args.answer))
-        for n, recommendation in enumerate(playthrough.iterations, start=1):
-            print(f"game loop #{n}: {describe(recommendation)}")
-        print(game)
-        print(f"{playthrough.status.value} with {game.coins} coins, {playthrough.guesses} guess(es)")
-    else:
-        play_interactively(game)
-        print(f"{game.status.value} with {game.coins} coins")
+    row_counts = [ask_counter(f"row {n + 1}") for n in range(GRID_SIZE)]
+    col_counts = [ask_counter(f"column {n + 1}") for n in range(GRID_SIZE)]
+    game = Game.from_counts(row_counts, col_counts, levels=levels)
+    play_interactively(game)
+    print(f"{game.status.value} with {game.coins} coins")
     write_board_state(game)

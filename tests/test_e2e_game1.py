@@ -34,25 +34,29 @@ def test_solves_without_level_tables(game1):
     playthrough = play(Game.from_counts(rows, cols, levels=None), answer)
     assert playthrough.status is Status.WON and playthrough.guesses == 0
 
-def run_cli(*args, stdin=''):
+def run_cli(stdin):
     return subprocess.run(
-        [sys.executable, '-m', 'backend.main', 'input/game1.txt', *args],
+        [sys.executable, '-m', 'backend.main'],
         cwd=REPO, input=stdin, capture_output=True, text=True, timeout=60, check=True,
     ).stdout
 
-def test_cli_plays_against_the_answer():
-    out = run_cli('--answer', 'input/game1_answer.txt')
-    assert 'game loop #1: flip (0,2), (2,2), (3,2), (4,2)' in out
-    assert 'game loop #2: flip (0,1), (3,1)' in out
-    assert out.strip().endswith('won with 24 coins, 0 guess(es)')
+def counters_input(game1):
+    rows, cols, _ = game1
+    return ''.join(f'{value},{voltorbs}\n' for value, voltorbs in [*rows, *cols])
 
-def test_cli_prompts_for_each_flip(game1):
+def test_cli_prompts_for_counters_then_each_flip(game1):
     _, _, answer = game1
     results = [answer[0][2], answer[2][2], answer[3][2], answer[4][2], answer[0][1], answer[3][1]]
-    out = run_cli(stdin=''.join(f'{value}\n' for value in results))
+    out = run_cli(counters_input(game1) + ''.join(f'{value}\n' for value in results))
+    assert 'flip (0,2), (2,2), (3,2), (4,2)' in out
+    assert 'flip (0,1), (3,1)' in out
     assert out.count('showed') == len(results)
     assert out.strip().endswith('won with 24 coins')
 
-def test_cli_stops_when_told_done():
-    out = run_cli(stdin='1\ndone\n')
+def test_cli_reprompts_a_bad_counter(game1):
+    out = run_cli('5;1\n' + counters_input(game1) + 'done\n')
+    assert 'e.g. 5,1' in out
+
+def test_cli_stops_when_told_done(game1):
+    out = run_cli(counters_input(game1) + '1\ndone\n')
     assert out.strip().endswith('playing with 1 coins')
