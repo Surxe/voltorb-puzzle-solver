@@ -5,7 +5,7 @@ from backend.analysis import BoardOdds, analyze
 from backend.board import Board, Counts, board_from_counts
 from backend.constants import VOLTORB
 from backend.errors import Contradiction
-from backend.levels import LEVELS, TRACKED, BoardConfig, level_weights
+from backend.levels import LEVELS, TRACKED, BoardConfig, free_multipliers, level_weights
 from backend.strategy import Recommendation, SafeFirst, Strategy, candidates
 
 class Status(Enum):
@@ -16,8 +16,8 @@ class Status(Enum):
 class Game:
     """
     One round: flip results go in through reveal(), and recommend() narrows the board and says what to flip next.
-    Guesses are weighed by how likely the configurations in levels are to deal each board (None just counts boards);
-    certainties never depend on them.
+    Guesses are weighed by how likely the game is to deal each board from the configs in levels (None just counts
+    boards); certainties never depend on them.
     """
     def __init__(self, current_board: Board, strategy: Strategy | None = None,
                  levels: list[list[BoardConfig]] | None = LEVELS):
@@ -56,7 +56,8 @@ class Game:
         self.likely = self.certain
         if self.levels:
             voltorbs = sum(row.cell_set_counter.voltorbs for row in self.current_board.rows)
-            weights = level_weights(voltorbs, self.current_board.size, self.levels)
+            free = free_multipliers(self.current_board)
+            weights = level_weights(voltorbs, self.current_board.size, self.levels, free)
             try:
                 self.likely = analyze(self.current_board, TRACKED, weights) if weights else self.certain
             except Contradiction: # a board the level tables don't cover, so just count boards

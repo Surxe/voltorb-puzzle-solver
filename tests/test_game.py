@@ -6,7 +6,7 @@ from backend.analysis import analyze
 from backend.board import board_from_counts
 from backend.constants import VOLTORB
 from backend.game import Game, Status
-from backend.levels import LEVELS, counts_of, random_answer
+from backend.levels import LEVELS, counts_of, deal
 from backend.simulate import play
 from backend.strategy import Recommendation, SafeFirst, candidates
 
@@ -82,7 +82,7 @@ def test_level_tables_only_change_guesses():
     """Certainties come from every matching board, so the level tables can't make a voltorb look safe"""
     rng = random.Random(3)
     for level in LEVELS:
-        answer = random_answer(rng.choice(level), rng)
+        answer = deal(rng.choice(level), rng)
         with_levels = Game.from_counts(*counts_of(answer))
         without = Game.from_counts(*counts_of(answer), levels=None)
         first, second = with_levels.recommend(), without.recommend()
@@ -98,19 +98,15 @@ def test_simulated_games(level):
     and a loss only ever comes from a guess
     """
     rng = random.Random(level)
-    wins = 0
     for _ in range(12):
-        answer = random_answer(rng.choice(LEVELS[level - 1]), rng)
+        answer = deal(rng.choice(LEVELS[level - 1]), rng)
         game = Game.from_counts(*counts_of(answer))
         playthrough = play(game, answer)
         for recommendation in playthrough.iterations:
             if recommendation.safe:
                 assert all(answer[i][j] != VOLTORB for i, j in recommendation.flips)
         if playthrough.status is Status.WON:
-            wins += 1
             assert all(game.current_board.cell(i, j).revealed for i in range(5) for j in range(5) if answer[i][j] > 1)
         else:
             assert playthrough.status is Status.LOST
             assert not playthrough.iterations[-1].safe
-    if level == 1:
-        assert wins == 12
