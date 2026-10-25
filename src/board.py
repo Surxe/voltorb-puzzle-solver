@@ -21,6 +21,12 @@ class Board:
             string += str(col.cell_set_counter) + ' '
         return string
 
+    def update(self):
+        for row in self.rows:
+            row.update()
+        for col in self.cols:
+            col.update()
+
 def add_cell_to_set(existing_cells_table, existing_core_cells, input_table, i, j):
     # if the cell already exists, use it
     existing_cell = existing_cells_table[i][j]

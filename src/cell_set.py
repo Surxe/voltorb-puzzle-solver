@@ -26,6 +26,7 @@ class CellSet:
         For a CellSet with n unsolved cells, v value, and z voltorbs
             each unsolved cell has options from process_options_to_remove(v, n, z) removed
         """
+        before = str(self)
         unsolved_cells = self.get_unsolved_core_cells()
         options_to_remove = process_options_to_remove(
             v=self.cell_set_counter.value, 
@@ -34,6 +35,8 @@ class CellSet:
         )
         for core_cell in unsolved_cells:
             core_cell.update(options_to_remove)
+        after = str(self)
+        log(f"CellSet.update(). Before: {before}, After: {after}")
         
 
 """
@@ -126,7 +129,10 @@ def process_new_options(v, c, z):
 
 def process_options_to_remove(v, c, z):
     new_options = _process_new_options(v, c, z)
-    removed_options = [option for option in all_options if option not in new_options]
+    if new_options is None:
+        removed_options = all_options
+    else:
+        removed_options = [option for option in all_options if option not in new_options]
     return removed_options
 
 def cache_to_disk():
