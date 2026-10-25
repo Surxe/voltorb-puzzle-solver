@@ -10,14 +10,12 @@ is flipped, or when you say you've found them all.
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt        # requirements-dev.txt for the tests
-python scripts/fetch_assets.py         # game sprites + DS font for the web UI
 ```
 
-The sprites aren't checked in. `scripts/fetch_assets.py` downloads them into the gitignored
-`frontend/static/game/`, from pinned commits of
-[samualtnorman/voltorb-flip](https://github.com/samualtnorman/voltorb-flip) (sprites ripped from the
-game) and [danielbWork/Voltorb-Flip](https://github.com/danielbWork/Voltorb-Flip) (DS font). The web
-UI also fetches them on first start.
+The art is original, not taken from the game: `scripts/make_sprites.py` draws every sprite in code
+and writes the PNGs to `frontend/static/sprites/`. Re-run it after changing the art; a test fails if
+the checked-in PNGs fall out of date. The pixel font is [Silkscreen](https://github.com/googlefonts/silkscreen)
+(SIL Open Font License), vendored in `frontend/static/fonts/`.
 
 ## Web UI
 ```bash
@@ -28,7 +26,7 @@ python -m frontend.app    # http://127.0.0.1:5000
 2. The cards to flip get the red cursor. Flip them in game and type what each showed (`1`-`3`, or `0`
    for a Voltorb), then press **Enter** for the next batch.
 3. If no card is certainly safe, the solver marks the single card least likely to be a Voltorb and shows
-   the risk.
+   the risk. See [Why it sometimes guesses](#why-it-sometimes-guesses).
 
 Corner marks on a face-down card show what it can still be. The number on it is the chance it's a
 Voltorb. Clicking a face-down card lets you enter a flip the solver didn't ask for. **Back** undoes the
@@ -36,12 +34,11 @@ last batch. **Found all 2s & 3s** ends the round.
 
 ## CLI
 ```bash
-python -m backend.main input/game1.txt                                  # prompts for each flip
-python -m backend.main input/game1.txt --answer input/game1_answer.txt  # plays itself against the answer
+python -m backend.main
 ```
-A counts file has one `value,voltorbs` line per row, a blank line, then one per column. An answer
-file has one line of digits per row. Add `--level N` to weigh guesses by that level's boards only, or
-`--no-levels` to weigh every matching board the same.
+It asks for each row's and then each column's counter (`5,1`), then for every card it says to flip.
+Add `--level N` to weigh guesses by that level's boards only, or `--no-levels` to weigh every matching
+board the same.
 
 ## How it solves
 Each layer only narrows what the layer before left open:
@@ -58,6 +55,28 @@ Each layer only narrows what the layer before left open:
 The web UI (`frontend/app.py`) is stateless. Each request sends the counters and every flip so far
 to `POST /api/solve`.
 
+## Why it sometimes guesses
+The counters don't always pin down one board. These two boards show the same counter on every row
+and column:
+
+```
+1 1 0 1 2      1 1 2 1 0
+1 1 2 2 0      1 1 0 2 2
+1 1 1 1 1      1 1 1 1 1
+1 1 0 0 0      1 1 0 0 0
+3 2 1 1 0      3 2 1 1 0
+```
+
+They differ only in the 0/2 rectangle in the top right. Every other card is the same in both, so
+flipping those cards can never tell the boards apart. To win you must flip the 2's in that rectangle,
+and each of its four cards is a Voltorb in one of the two boards. That's a 50/50 no method can avoid
+(`tests/test_guessing.py`).
+
+How often this happens doesn't depend on the order of safe flips: flipping every surely-safe card
+always reaches the same point. On random boards dealt from the level tables, about 45% of Lv. 1
+boards and 94% of Lv. 7-8 boards force at least one guess. Treating the level tables as hard rules
+only lowers that by 0-2 points.
+
 ## Tests
 ```bash
 python -m pytest            # everything
@@ -70,6 +89,9 @@ python -m pytest -m "not browser"
 - `test_analysis.py`: board odds and level weights against brute-force enumeration
 - `test_game.py`: simulated games at every level. A safe flip is never a Voltorb, and a loss only
   comes from a guess.
-- `test_e2e_game1.py`: `input/game1.txt` played against its answer through the backend and the CLI
+- `test_e2e_game1.py`: the game in progress when this was written, played against its answer through
+  the backend and the CLI
+- `test_guessing.py`: the two boards above, showing the solver ends on a 50/50
+- `test_sprites.py`: the checked-in sprites match `scripts/make_sprites.py`
 - `test_app.py`, `test_browser.py`: the API, then the real page in Chrome via Playwright, driven by
-  keyboard. Browser tests skip if Playwright, a Chrome/Chromium, or the sprites are missing.
+  keyboard. Browser tests skip if Playwright or a Chrome/Chromium is missing.

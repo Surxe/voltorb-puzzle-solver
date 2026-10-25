@@ -13,7 +13,6 @@ from backend.constants import ALL, GRID_SIZE
 from backend.errors import Contradiction
 from backend.game import Game
 from backend.levels import LEVELS
-from scripts.fetch_assets import fetch, missing
 
 def parse_counts(raw, name) -> list[tuple[int, int]]:
     if not isinstance(raw, list) or len(raw) != GRID_SIZE:
@@ -69,7 +68,7 @@ def create_app() -> Flask:
 
     @app.get('/')
     def index():
-        return render_template('index.html', size=GRID_SIZE, levels=len(LEVELS), assets_ready=not missing())
+        return render_template('index.html', size=GRID_SIZE, levels=len(LEVELS))
 
     @app.post('/api/solve')
     def api_solve():
@@ -92,6 +91,4 @@ if __name__ == '__main__':
     parser.add_argument('--debug', action='store_true')
     args = parser.parse_args()
 
-    if missing():
-        fetch()
     create_app().run(host='127.0.0.1', port=args.port, debug=args.debug)

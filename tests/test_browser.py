@@ -1,6 +1,6 @@
 """
 The web UI driven in a real browser, keyboard first: Tab through the counters, Enter to solve, type each flip.
-Skipped without playwright, a Chromium/Chrome to drive, or the fetched game sprites.
+Skipped without playwright or a Chromium/Chrome to drive.
 """
 import threading
 
@@ -10,14 +10,11 @@ playwright = pytest.importorskip('playwright.sync_api')
 from werkzeug.serving import make_server
 
 from frontend.app import create_app
-from scripts.fetch_assets import missing
 
 pytestmark = pytest.mark.browser
 
 @pytest.fixture(scope='module')
 def server():
-    if missing():
-        pytest.skip('game sprites not fetched: python scripts/fetch_assets.py')
     httpd = make_server('127.0.0.1', 0, create_app())
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     thread.start()
@@ -75,8 +72,7 @@ def message(page):
     return page.inner_text('#message')
 
 def coins(page, id):
-    sources = page.eval_on_selector_all(f'#{id} img', 'imgs => imgs.map(i => i.getAttribute("src"))')
-    return int(''.join(src.rsplit('_', 1)[1][0] for src in sources))
+    return int(page.inner_text(f'#{id}'))
 
 def test_tab_order_walks_rows_then_columns(page):
     labels = []
@@ -87,10 +83,12 @@ def test_tab_order_walks_rows_then_columns(page):
     assert labels[10:12] == ['Column 1 points', 'Column 1 Voltorbs']
     assert labels[-1] == 'Column 5 Voltorbs'
 
-def test_counters_are_drawn_with_the_game_digits(page):
-    page.keyboard.type('5')
-    background = page.evaluate('document.activeElement.style.backgroundImage')
-    assert 'bold_0.png' in background and 'bold_5.png' in background
+def test_counters_keep_only_what_fits(page):
+    page.keyboard.type('17') # a row holds at most 15 points
+    assert page.evaluate('document.activeElement.value') == '7'
+    page.keyboard.press('Tab')
+    page.keyboard.type('9') # and at most 5 voltorbs
+    assert page.evaluate('document.activeElement.value') == ''
 
 def test_plays_game1_with_the_keyboard(page, game1):
     rows, cols, answer = game1

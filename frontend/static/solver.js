@@ -4,8 +4,9 @@
 
   const app = document.getElementById('app');
   const SIZE = Number(app.dataset.size);
-  const sprite = (path) => `${app.dataset.assets}${path}.png`;
-  const FACES = ['tile/voltorb', 'tile/1', 'tile/2', 'tile/3']; // by card value
+  const sprite = (name) => `${app.dataset.sprites}${name}.png`;
+  const FACES = ['card_0', 'card_1', 'card_2', 'card_3']; // by card value, 0 being a Voltorb
+  for (const name of FACES) new Image().src = sprite(name); // so a typed flip shows its face at once
   const TOTAL_KEY = 'voltorb-solver-total-coins';
 
   const $ = (selector, root = document) => root.querySelector(selector);
@@ -32,23 +33,8 @@
   let lastResponse = null;
   let busy = false;
 
-  // ---------- sprite digits ----------
-
-  // Draws an input's digits with the game's number sprites, as its own background layers
-  function drawDigits(input, style, offsets, top = 1) {
-    const text = input.value === '' ? '' : input.value.padStart(offsets.length, '0');
-    input.style.backgroundImage = [...text].map((digit) => `url(${sprite(`number/${style}_${digit}`)})`).join(', ');
-    input.style.backgroundPosition = [...text].map((_, k) => `${offsets[k]}px ${top}px`).join(', ');
-  }
-
-  function drawCounter(input) {
-    if (input.classList.contains('value')) drawDigits(input, 'bold', [2, 10]);
-    else drawDigits(input, 'bold', [2]);
-  }
-
   function drawCoins(id, coins) {
-    const digits = String(Math.max(0, Math.min(coins, 99999))).padStart(5, '0');
-    $$(`#${id} img`).forEach((img, k) => { img.src = sprite(`number/big_${digits[k]}`); });
+    $(`#${id}`).textContent = String(Math.max(0, Math.min(coins, 99999))).padStart(5, '0');
   }
 
   // ---------- inputs ----------
@@ -63,13 +49,12 @@
   }
 
   for (const { value, voltorbs } of [...rows, ...cols]) {
-    value.addEventListener('input', () => { sanitize(value, 3 * SIZE); drawCounter(value); });
-    voltorbs.addEventListener('input', () => { sanitize(voltorbs, SIZE); drawCounter(voltorbs); });
+    value.addEventListener('input', () => sanitize(value, 3 * SIZE));
+    voltorbs.addEventListener('input', () => sanitize(voltorbs, SIZE));
   }
   levelInput.addEventListener('input', () => {
     sanitize(levelInput, 8);
     if (levelInput.value === '0') levelInput.value = '';
-    drawDigits(levelInput, 'thin', [1]);
   });
   $$('input').forEach((input) => input.addEventListener('focus', () => input.select()));
 
@@ -97,7 +82,7 @@
     const value = flipInput(tile).value;
     tile.classList.toggle('previewing', value !== '');
     if (value !== '') face(tile).src = sprite(FACES[Number(value)]);
-    else if (!tile.classList.contains('revealed')) face(tile).src = sprite('tile/blank');
+    else if (!tile.classList.contains('revealed')) face(tile).src = sprite('card_back');
   }
 
   function setPending(tile, pending) {
@@ -123,7 +108,7 @@
       const action = actions[k];
       button.disabled = !action; // an empty row stays drawn, like the game's menu
       button.onclick = action ? () => { if (!busy) action.run(); } : null;
-      $('span', button).textContent = action ? action.label : '';
+      button.textContent = action ? action.label : '';
       button.title = action?.title ?? '';
     });
   }
@@ -213,7 +198,7 @@
     tiles.forEach((row, i) => row.forEach((tile, j) => {
       const cell = response.cells[i][j];
       tile.classList.toggle('revealed', cell.revealed);
-      face(tile).src = sprite(cell.revealed ? FACES[cell.options[0]] : 'tile/blank');
+      face(tile).src = sprite(cell.revealed ? FACES[cell.options[0]] : 'card_back');
       for (let k = 0; k < 4; k++) tile.classList.toggle(`can-${k}`, !cell.revealed && cell.options.includes(k));
       const uncertain = !cell.revealed && cell.voltorb > 0 && cell.voltorb < 1;
       $('.odds', tile).textContent = uncertain ? percent(cell.voltorb) : '';
@@ -302,7 +287,7 @@
       tile.removeAttribute('title');
       $('.odds', tile).textContent = '';
       setPending(tile, false);
-      face(tile).src = sprite('tile/blank');
+      face(tile).src = sprite('card_back');
     }
     drawCoins('current-coins', 0);
   }
@@ -321,11 +306,7 @@
   }
 
   function clearCounts() {
-    for (const { value, voltorbs } of [...rows, ...cols]) {
-      value.value = voltorbs.value = '';
-      drawCounter(value);
-      drawCounter(voltorbs);
-    }
+    for (const { value, voltorbs } of [...rows, ...cols]) value.value = voltorbs.value = '';
     enterCounts();
   }
 
@@ -343,17 +324,23 @@
     submit();
   });
 
-  // ---------- fit the DS to the window at a whole-number zoom ----------
+  // ---------- fit the app to the window at a whole-number zoom ----------
 
   function fit() {
-    const side = 6 + 124;
-    const wide = Math.floor(Math.min((innerHeight - 8) / 407, (innerWidth - 8) / (270 + side)));
-    const stacked = Math.floor(Math.min((innerHeight - 8) / (407 + 6 + 140), (innerWidth - 8) / 270));
+    const zoomFor = (stacked) => {
+      app.classList.toggle('stacked', stacked);
+      app.style.setProperty('--zoom', '1');
+      const { width, height } = app.getBoundingClientRect();
+      return Math.floor(Math.min((innerWidth - 8) / width, (innerHeight - 8) / height));
+    };
+    const wide = zoomFor(false);
+    const stacked = zoomFor(true);
     app.classList.toggle('stacked', stacked > wide);
     app.style.setProperty('--zoom', String(Math.max(1, wide, stacked)));
   }
   addEventListener('resize', fit);
   fit();
+  document.fonts.ready.then(fit);
 
   addToTotal(0);
   enterCounts();

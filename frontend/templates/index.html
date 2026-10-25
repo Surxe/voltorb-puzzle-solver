@@ -4,60 +4,60 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Voltorb Flip Solver</title>
-  <link rel="icon" href="{{ url_for('static', filename='game/favicon.png') }}">
+  <link rel="icon" href="{{ url_for('static', filename='sprites/favicon.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='solver.css') }}">
 </head>
 <body>
-  {% if not assets_ready %}
-  <p class="missing">Game sprites are missing: run <code>python scripts/fetch_assets.py</code> and reload.</p>
-  {% endif %}
-  {#- Positions are in DS pixels (the background sprite is 262x399); the whole app is zoomed by an integer factor. -#}
-  <main id="app" aria-busy="false" data-size="{{ size }}" data-assets="{{ url_for('static', filename='game/') }}">
-    <section class="ds" aria-label="Voltorb Flip board">
-      <img class="screen" src="{{ url_for('static', filename='game/background.png') }}" alt="">
+  {#- Sizes are in art pixels (a card is 24x24); the whole app is zoomed by a whole number to keep the pixels crisp. -#}
+  {%- set colors = ['#e8704f', '#45b04a', '#eda43a', '#3f8fe8', '#b867e0'] -%}
+  <main id="app" aria-busy="false" data-size="{{ size }}" data-sprites="{{ url_for('static', filename='sprites/') }}">
+    <section class="console">
+      <header class="status">
+        <h1>Voltorb Flip Solver</h1>
+        <label class="level">Lv <input id="level" inputmode="numeric" maxlength="1" autocomplete="off"
+               aria-label="Level shown in game (1-{{ levels }}, blank if unknown)" title="Lv. shown in game (blank: any)"></label>
+        <p class="coins">Coins <output id="current-coins">00000</output></p>
+        <p class="coins">Total <output id="total-coins">00000</output></p>
+      </header>
 
-      <input id="level" class="level" inputmode="numeric" maxlength="1" autocomplete="off"
-             aria-label="Level shown in game (1-{{ levels }}, blank if unknown)" title="Lv. shown in game (blank: any)">
-      {% for id, top in (('total-coins', 117), ('current-coins', 157)) %}
-      <div id="{{ id }}" class="coins" aria-hidden="true">
-        {% for k in range(5) %}<img style="left: {{ 172 + 16 * k }}px; top: {{ top }}px" alt="">{% endfor %}
+      <div class="board" style="--size: {{ size }}">
+        {#- each row and column has a color; its line runs behind its cards into its counter -#}
+        {% for n in range(size) %}
+        <div class="line row-line" style="--n: {{ n }}; --color: {{ colors[n % colors | length] }}"></div>
+        <div class="line col-line" style="--n: {{ n }}; --color: {{ colors[n % colors | length] }}"></div>
+        {% endfor %}
+
+        {#- Cards come first so, once a batch of flips is marked, Tab walks those inputs before the counters. -#}
+        {% for i in range(size) %}{% for j in range(size) %}
+        <div class="tile" data-i="{{ i }}" data-j="{{ j }}" style="grid-row: {{ i + 1 }}; grid-column: {{ j + 1 }}">
+          <img class="face" src="{{ url_for('static', filename='sprites/card_back.png') }}" alt="">
+          {% for k in range(4) %}<img class="memo memo-{{ k }}" src="{{ url_for('static', filename='sprites/memo_%d.png' % k) }}" alt="">{% endfor %}
+          <span class="odds"></span>
+          <img class="cursor" src="{{ url_for('static', filename='sprites/cursor.png') }}" alt="">
+          <input class="flip" inputmode="numeric" maxlength="1" autocomplete="off" disabled
+                 aria-label="Row {{ i + 1 }} column {{ j + 1 }}: what the card showed (0 for a Voltorb)">
+        </div>
+        {% endfor %}{% endfor %}
+
+        {% for line, name in (('row', 'Row'), ('col', 'Column')) %}{% for n in range(size) %}
+        {%- set cell = (n + 1, size + 1) if line == 'row' else (size + 1, n + 1) %}
+        <div class="counter" style="grid-row: {{ cell[0] }}; grid-column: {{ cell[1] }}; --color: {{ colors[n % colors | length] }}">
+          <input class="count value" data-line="{{ line }}" data-n="{{ n }}"
+                 inputmode="numeric" maxlength="2" autocomplete="off" aria-label="{{ name }} {{ n + 1 }} points">
+          <img class="bomb" src="{{ url_for('static', filename='sprites/bomb_small.png') }}" alt="">
+          <input class="count voltorbs" data-line="{{ line }}" data-n="{{ n }}"
+                 inputmode="numeric" maxlength="1" autocomplete="off" aria-label="{{ name }} {{ n + 1 }} Voltorbs">
+        </div>
+        {% endfor %}{% endfor %}
       </div>
-      {% endfor %}
-
-      {#- Tiles come first so, once a batch of flips is marked, Tab walks those inputs before the counters. -#}
-      {% for i in range(size) %}{% for j in range(size) %}
-      <div class="tile" data-i="{{ i }}" data-j="{{ j }}" style="left: {{ 12 + 32 * j }}px; top: {{ 204 + 32 * i }}px">
-        <img class="face" alt="">
-        {% for k in range(4) %}<img class="memo memo-{{ k }}" src="{{ url_for('static', filename='game/memo/%d.png' % k) }}" alt="">{% endfor %}
-        <span class="odds"></span>
-        <img class="cursor" src="{{ url_for('static', filename='game/tile/hover.png') }}" alt="">
-        <input class="flip" inputmode="numeric" maxlength="1" autocomplete="off" disabled
-               aria-label="Row {{ i + 1 }} column {{ j + 1 }}: what the card showed (0 for a Voltorb)">
-      </div>
-      {% endfor %}{% endfor %}
-
-      {% for line, name in (('row', 'Row'), ('col', 'Column')) %}{% for n in range(size) %}
-      {%- set x = 178 if line == 'row' else 18 + 32 * n -%}
-      {%- set y = 202 + 32 * n if line == 'row' else 362 -%}
-      <input class="count value" data-line="{{ line }}" data-n="{{ n }}" style="left: {{ x }}px; top: {{ y }}px"
-             inputmode="numeric" maxlength="2" autocomplete="off" aria-label="{{ name }} {{ n + 1 }} points">
-      <input class="count voltorbs" data-line="{{ line }}" data-n="{{ n }}" style="left: {{ x + 8 }}px; top: {{ y + 13 }}px"
-             inputmode="numeric" maxlength="1" autocomplete="off" aria-label="{{ name }} {{ n + 1 }} Voltorbs">
-      {% endfor %}{% endfor %}
     </section>
 
     <aside class="panel">
       <div class="dialogue"><p id="message" role="status" aria-live="polite"></p></div>
       <nav class="menu" aria-label="Actions">
-        <img class="frame" src="{{ url_for('static', filename='game/frame/frame.png') }}" alt="">
-        {% for k in range(3) %}
-        <button type="button" class="action" style="top: {{ 7 + 24 * k }}px">
-          <img class="cursor" src="{{ url_for('static', filename='game/frame/hover_%d.png' % k) }}" style="top: {{ -8 - 24 * k }}px" alt="">
-          <span></span>
-        </button>
-        {% endfor %}
+        {% for k in range(3) %}<button type="button" class="action"></button>{% endfor %}
       </nav>
-      <p class="hint">Tab: next box &middot; Enter: submit<br>Corner marks: what a card can still be. Click a face-down card to enter a flip yourself.</p>
+      <p class="hint">Tab: next box. Enter: submit.<br>Corner marks: what a card can still be. Middle: its Voltorb chance. Click a face-down card to enter a flip yourself.</p>
     </aside>
   </main>
   <script src="{{ url_for('static', filename='solver.js') }}"></script>
