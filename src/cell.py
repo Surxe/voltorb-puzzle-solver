@@ -14,6 +14,8 @@ class Cell:
         return len(self.options) == 1 #solved if only 1 option remains
     def update(self, options_to_remove):
         self.options = remove_options(self.options, options_to_remove)
+    def set(self, new_options):
+        self.options = new_options
 
 def remove_options(options, options_to_remove):
     res = [o for o in options if o not in options_to_remove]

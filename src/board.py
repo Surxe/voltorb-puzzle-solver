@@ -5,6 +5,7 @@ from src.cell import Cell
 from src.cell_set import CellSet
 from src.cell_set_counter import CellSetCounter
 from src.constants import GRID_SIZE
+from src.utils import log
 
 class Board:
     def __init__(self, _row_cell_sets: list[CellSet], _col_cell_sets: list[CellSet]):
@@ -13,19 +14,34 @@ class Board:
         self.size = len(_row_cell_sets)
 
     def __str__(self):
-        string = ""
+        contents = ""
         # core 5x5 table + row total
         for row in self.rows:
-            string += str(row) + '\n'
+            contents += str(row) + '\n'
         for col in self.cols:
-            string += str(col.cell_set_counter) + ' '
-        return string
+            contents += str(col.cell_set_counter) + ' '
 
-    def update(self):
-        for row in self.rows:
+        return f"Board:\n{contents}\n"
+
+    def set_cell(self, i, j, new_options):
+        self.rows[i].core_cells[j].set(new_options)
+        self.cols[j].core_cells[i].set(new_options)
+
+    def update(self, do_log=True):
+        # Update each Cell
+        log("rows update()", do_log=do_log)
+        for i, row in enumerate(self.rows):
+            log(f"row {i}", do_log=True)
             row.update()
-        for col in self.cols:
+        log(self, do_log=do_log)
+
+        log("cols update()", do_log=do_log)
+        for j, col in enumerate(self.cols):
+            log(f"col {j}", do_log=True)
             col.update()
+        log(self, do_log=do_log)
+                    
+
 
 def add_cell_to_set(existing_cells_table, existing_core_cells, input_table, i, j):
     # if the cell already exists, use it

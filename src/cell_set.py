@@ -17,9 +17,25 @@ class CellSet:
             string += str(core_cell) + ' '
         string += str(self.cell_set_counter)
         return string
+    
     def get_unsolved_core_cells(self):
         """Returns unsolved core cells"""
         return [core_cell for core_cell in self.core_cells if not core_cell.is_solved()]
+
+    def get_solved_core_cells(self):
+        return [core_cell for core_cell in self.core_cells if core_cell.is_solved()]
+
+    def get_num_voltorbs_in_play(self):
+        """Returns # of voltorbs already known & solved in this cell set"""
+        return len([n for n in self.core_cells if n.options == [0]])
+
+    def get_current_value_in_play(self):
+        """Returns the amount of value the CellSet currently has amongst solved cells"""
+        solved_core_cells = self.get_solved_core_cells()
+        value = 0
+        for solved_core_cell in solved_core_cells:
+            value += solved_core_cell.options[0] #solved cell has only 1 option- the current value
+        return value
     
     def update(self):
         """
@@ -28,15 +44,18 @@ class CellSet:
         """
         before = str(self)
         unsolved_cells = self.get_unsolved_core_cells()
+        v = self.cell_set_counter.value - self.get_current_value_in_play()
+        c = len(unsolved_cells)
+        z = self.cell_set_counter.voltorbs - self.get_num_voltorbs_in_play()
         options_to_remove = process_options_to_remove(
-            v=self.cell_set_counter.value, 
-            c=len(unsolved_cells), 
-            z=self.cell_set_counter.voltorbs
+            v=v, 
+            c=c,
+            z=z
         )
         for core_cell in unsolved_cells:
             core_cell.update(options_to_remove)
         after = str(self)
-        log(f"CellSet.update(). Before: {before}, After: {after}")
+        log(f"CellSet.update() - (v={v},c={c},z={z}) - Before: {before}, After: {after}", do_log=True)
         
 
 """

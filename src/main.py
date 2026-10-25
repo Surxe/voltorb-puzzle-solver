@@ -9,42 +9,61 @@ from src.cell import Cell
 from src.cell_set import CellSet
 from src.cell_set_counter import CellSetCounter
 from src.board import Board, board_factory
+from src.game import Game
 from src.constants import *
 from src.utils import log
     
-def init_state() -> Board:
-    return board_factory([
-        [ALL,    ALL,    ALL,    ALL,    ONE,    (3, 2)],
-        [ALL,    ALL,    ALL,    ALL,    ONE,    (6, 1)],
-        [ALL,    ALL,    ALL,    ALL,    ONE,    (4, 2)],
-        [ALL,    ALL,    ALL,    ALL,    ONE,    (3, 2)],
-        [ONE,    TWO,    ONE,    THREE,  ONE,    (8, 0)],
-        [(4, 2), (5, 1), (4, 2), (6, 1), (5, 0), None]
+def init_game() -> Game:
+    # initial_table_state = [
+    #     [[0,1],   [0,1,2], ONE,     [0,1],    ONE,    (5, 1)],
+    #     [[0,1],   [0,1],   ONE,     [0,1],    ONE,    (4, 1)],
+    #     [[0,1],   ALL,     TWO,     [0,1],    ONE,    (5, 2)],
+    #     [[0,1],   ALL,     ONE,     [0,1],    ONE,    (5, 2)],
+    #     [[0,1],   ALL,     THREE,   [0,1],    ONE,    (5, 2)],
+    #     [(2, 3),  (6, 1),  (8, 0),  (3, 2),   (5, 0), None]
+    # ]
+    current_board = board_factory([
+        [ALL,    ALL,    ALL,    ALL,    ALL,    (5, 1)],
+        [ALL,    ALL,    ALL,    ALL,    ALL,    (4, 1)],
+        [ALL,    ALL,    ALL,    ALL,    ALL,    (5, 1)],
+        [ALL,    ALL,    ALL,    ALL,    ALL,    (5, 1)],
+        [ALL,    ALL,    ALL,    ALL,    ALL,    (5, 2)],
+        [(2, 3), (6, 1), (8, 0), (3, 2), (5, 0), None]
     ])
+    answer_board = board_factory([
+        [ZERO,   TWO,    ONE,    ONE,    ONE,    (5, 1)],
+        [ZERO,   ONE,    ONE,    ONE,    ONE,    (4, 1)],
+        [ONE,    ZERO,   TWO,    ONE,    ONE,    (5, 1)],
+        [ONE,    TWO,    ONE,    ZERO,   ONE,    (5, 1)],
+        [ZERO,   ONE,    THREE,  ZERO,   ONE,    (5, 2)],
+        [(2, 3), (6, 1), (8, 0), (3, 2), (5, 0), None]
+    ])
+    game = Game(current_board, answer_board)
+    return game
 
-def print_board(board, num_board_updates):
-    print(f"Board: {num_board_updates}")
-    print(board)
-    print()
 
 if __name__ == '__main__':
-    board = init_state()
-    board_str = str(board)
+    game = init_game()
+    game_str = str(game)
     
     path = os.path.join(OUTPUT_DIR, 'board_state.txt')
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     with open(encoding='utf-8', mode='w', file=path) as f:
-        f.write(board_str)
+        f.write(game_str)
 
-    print_board(board, 0)
+    print(game)
 
-    num_board_updates=0
+    num_game_updates=0
     while True:
-        board.update()
-        print_board(board, num_board_updates+1)
-        num_board_updates += 1
+        print(f"game loop #{num_game_updates+1}")
+        game.update()
+        game.flip()
+        print("flip()")
+        print(game)
 
-        if num_board_updates==2:
+        num_game_updates += 1
+
+        if num_game_updates==2:
             break
 
     # row_cell_set0 = board.rows[0]
