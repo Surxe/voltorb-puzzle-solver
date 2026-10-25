@@ -128,24 +128,26 @@
     });
   }
 
-  const percent = (p) => `${Math.round(p * 100)}%`;
+  // a chance that's only nearly certain shouldn't round to one that is
+  const percent = (p) => (p > 0 && p < 0.005 ? '<1%' : p < 1 && p > 0.995 ? '>99%' : `${Math.round(p * 100)}%`);
   const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
   // ---------- total coins, kept per browser ----------
 
-  function readTotal() {
-    try { return Number(localStorage.getItem(TOTAL_KEY)) || 0; } catch { return 0; }
-  }
-  function writeTotal(total) {
-    try { localStorage.setItem(TOTAL_KEY, String(total)); } catch { /* storage unavailable: total lives for this page only */ }
-    drawCoins('total-coins', total);
+  let totalCoins = 0;
+  try { totalCoins = Number(localStorage.getItem(TOTAL_KEY)) || 0; } catch { /* storage unavailable */ }
+
+  function addToTotal(coins) {
+    totalCoins += coins;
+    try { localStorage.setItem(TOTAL_KEY, String(totalCoins)); } catch { /* kept for this page only */ }
+    drawCoins('total-coins', totalCoins);
   }
   function bank(coins) {
     banked = coins;
-    writeTotal(readTotal() + coins);
+    addToTotal(coins);
   }
   function unbank() {
-    writeTotal(readTotal() - banked);
+    addToTotal(-banked);
     banked = 0;
   }
 
@@ -173,9 +175,9 @@
     }
     setBusy(true);
     try {
-      let response;
+      let reply, response;
       try {
-        const reply = await fetch('api/solve', {
+        reply = await fetch('api/solve', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...counts, revealed: nextRevealed, level: levelInput.value ? Number(levelInput.value) : null }),
@@ -184,8 +186,11 @@
       } catch (error) {
         return say(`Couldn't reach the solver: ${error.message}`);
       }
+      if (reply.status === 422) {
+        return say('No board fits these counters and flips.\nCheck them for a typo.');
+      }
       if (response.error) {
-        return say(`No board fits that.\n${response.error}.\nCheck the counters and flips for a typo.`);
+        return say(`Couldn't solve: ${response.error}`);
       }
       if (nextRevealed !== revealed) {
         history.push(revealed);
@@ -350,6 +355,6 @@
   addEventListener('resize', fit);
   fit();
 
-  writeTotal(readTotal());
+  addToTotal(0);
   enterCounts();
 })();

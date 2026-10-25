@@ -19,10 +19,6 @@ class CellSet:
         string += str(self.cell_set_counter)
         return string
 
-    def get_unsolved_core_cells(self):
-        """Returns unsolved core cells"""
-        return [core_cell for core_cell in self.core_cells if not core_cell.is_solved()]
-
     def current_options(self):
         """
         Returns all possible options any cell in the set can have

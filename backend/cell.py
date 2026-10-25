@@ -9,16 +9,12 @@ class Cell:
     def __str__(self):
         options_str = list_to_str(self.options)
         return spaced_str(options_str, LEN_MAX_OPTIONS_AS_STRING)
-    def is_solved(self):
-        return len(self.options) == 1 #solved if only 1 option remains
     def is_safe(self):
         """True when the cell can't be a voltorb"""
         return VOLTORB not in self.options
     def could_multiply(self):
         """True when the cell may still be worth flipping: a 2 or 3 multiplies the coins, a 1 changes nothing"""
         return any(option > 1 for option in self.options)
-    def update(self, options_to_remove):
-        return self.set(remove_options(self.options, options_to_remove))
     def set(self, new_options) -> bool:
         """Replaces the options; returns whether they changed"""
         new_options = sorted(new_options)
@@ -29,6 +25,3 @@ class Cell:
         """The card was flipped in the game and showed value"""
         self.set([value])
         self.revealed = True
-
-def remove_options(options, options_to_remove):
-    return [o for o in options if o not in options_to_remove]

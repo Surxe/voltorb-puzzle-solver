@@ -13,10 +13,6 @@ class BoardConfig:
     threes: int
     voltorbs: int
 
-    @property
-    def max_coins(self):
-        return 2 ** self.twos * 3 ** self.threes
-
 # Lv. 1-8, five configurations each
 LEVELS = [
     [BoardConfig(3, 1, 6), BoardConfig(0, 3, 6), BoardConfig(5, 0, 6), BoardConfig(2, 2, 6), BoardConfig(4, 1, 6)],
