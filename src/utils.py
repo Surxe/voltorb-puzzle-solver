@@ -8,3 +8,8 @@ def list_to_str(_list): #make this an overload of List?
 
 def spaced_str(str, min_len):
     return str + ' ' * (min_len - len(str))
+
+def log(msg, do_log=False):
+    if do_log:
+        print(msg)
+    

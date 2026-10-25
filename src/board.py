@@ -10,13 +10,11 @@ class Board:
 
     def __str__(self):
         string = ""
-
         # core 5x5 table + row total
         for row in self.rows:
             string += str(row) + '\n'
         for col in self.cols:
             string += str(col.cell_set_counter) + ' '
-
         return string
 
 def board_factory(table: list) -> Board:
