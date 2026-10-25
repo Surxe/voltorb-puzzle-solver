@@ -19,34 +19,30 @@ class Board:
 
         return string
 
-def board_factory(table_of_options: list, row_totals: list[tuple], col_totals: list[tuple]) -> tuple[list[CellSet], list[CellSet]]:
-    # table_of_options: [[options, options, .. options]]
-    # row_totals: [(value, voltorb)]
-    # col_totals: [(value, voltorb)]
-    # -> (row_cell_sets, col_cell_sets)
-    size = len(table_of_options)
+def board_factory(table: list) -> Board:
+    size = len(table)
     row_cell_sets = []
     col_cell_sets = []
 
     # create rows first
-    for i in range(size):
+    for i in range(size-1):
         core_rows = []
-        for j in range(size):
-            core_rows.append(Cell(table_of_options[i][j]))
-        row_cell_sets.append(CellSet(core_rows, CellSetCounter(row_totals[i][0], row_totals[i][1])))
+        for j in range(size-1):
+            core_rows.append(Cell(table[i][j]))
+        row_cell_sets.append(CellSet(core_rows, CellSetCounter(table[i][j+1][0], table[i][j+1][1])))
 
     # create cols next
-    for i in range(size):
+    for i in range(size-1):
         core_cols = []
-        for j in range(size):
-            core_cols.append(Cell(table_of_options[j][i]))
+        for j in range(size-1):
+            core_cols.append(Cell(table[j][i]))
         col_cell_sets.append(
             CellSet(core_cols[j], 
                 CellSetCounter(
-                    col_totals[j][0], 
-                    col_totals[j][1]
+                    table[j+1][i][0], 
+                    table[j+1][i][1]
                     )
             )
         )
         
-    return row_cell_sets, col_cell_sets
+    return Board(row_cell_sets, col_cell_sets)

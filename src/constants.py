@@ -5,3 +5,4 @@ ONE = [1]
 TWO = [2]
 THREE = [3]
 LEN_MAX_OPTIONS_AS_STRING = len('0123')
+OUTPUT_DIR = 'output'
