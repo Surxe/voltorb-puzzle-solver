@@ -63,7 +63,7 @@ if __name__ == '__main__':
 
         num_game_updates += 1
 
-        if num_game_updates==2:
+        if num_game_updates==1:
             break
 
     cache_to_disk()

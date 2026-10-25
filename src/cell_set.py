@@ -61,6 +61,8 @@ class CellSet:
         """
         result = dict()
         for option in self.current_options():
+            if option==0:
+                continue
             result[option] = 0
             for cell in self.core_cells:
                 if option in cell.options:
@@ -81,27 +83,27 @@ class CellSet:
             return
 
         # First, a CellSet wide check
-        count_of_options = self.get_count_of_options()
-        for option in self.current_options():
-            min_number_of_m_option = min_count_of_max(v, c, option)
-            if min_number_of_m_option == count_of_options[option]: #at least two 2's must exist and there are only 2 possible locations
-                # therefore both spots should have options set to [2]
-                for cell in self.core_cells:
-                    if option in cell.options:
-                        cell.set([option])
-                        log(f"set to option: {option}", do_log=True)
-                
-
-        options_to_remove = process_options_to_remove(
-            v=v, 
-            c=c,
-            z=z,
-            set_options=self.current_options()
-        )
-        for core_cell in unsolved_cells:
-            core_cell.update(options_to_remove)
-        after = str(self)
-        log(f"CellSet.update() - (v={v},c={c},z={z}) - Before: {before}, Removed: {options_to_remove}, After: {after}", do_log=True)
+        if 0 <= v <= 2 * c:
+            count_of_options = self.get_count_of_options()
+            for option in self.current_options():
+                min_number_of_m_option = min_count_of_max(v, c, option)
+                if option!=0 and min_number_of_m_option == count_of_options[option]: #at least two 2's must exist and there are only 2 possible locations
+                    # therefore both spots should have options set to [2]
+                    for cell in self.core_cells:
+                        if option in cell.options:
+                            cell.set([option])
+                            log(f"set to option: {option}", do_log=True)
+        else:
+            options_to_remove = process_options_to_remove(
+                v=v, 
+                c=c,
+                z=z,
+                set_options=self.current_options()
+            )
+            for core_cell in unsolved_cells:
+                core_cell.update(options_to_remove)
+            after = str(self)
+            log(f"CellSet.update() - (v={v},c={c},z={z}) - Before: {before}, Removed: {options_to_remove}, After: {after}", do_log=True)
         
 
 def min_count_of_max(v, c, m):
