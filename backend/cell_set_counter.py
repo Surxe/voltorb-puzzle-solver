@@ -1,8 +1,5 @@
-import sys
-sys.path.append(".")
-
-from src.utils import spaced_str
-from src.constants import *
+from backend.utils import spaced_str
+from backend.constants import LEN_MAX_OPTIONS_AS_STRING
 
 class CellSetCounter:
     # represents the sum value & voltorbs of either a row or a column

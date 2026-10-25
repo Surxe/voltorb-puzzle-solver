@@ -3,4 +3,8 @@
 # for now
 output/
 
-scratch/
+scratch/__pycache__/
+.pytest_cache/
+
+# game sprites, fetched by scripts/fetch_assets.py (not ours to redistribute)
+frontend/static/game/

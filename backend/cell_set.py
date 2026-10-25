@@ -1,13 +1,14 @@
-import sys
-sys.path.append(".")
+from functools import cache
+from itertools import product
 
-from src.cell import Cell, remove_options
-from src.cell_set_counter import CellSetCounter
-from src.utils import log
-from src.constants import GRID_SIZE, MAX_COIN_VALUE, OPTIONS_CACHE
+from backend.cell import Cell
+from backend.cell_set_counter import CellSetCounter
+from backend.constants import VOLTORB
+from backend.errors import Contradiction
+from backend.utils import log
 
 class CellSet:
-    # represents 5 core cells and its Counter
+    # represents the core cells of a row or column and its Counter
     def __init__(self, _core_cells: list[Cell], _cell_set_counter: CellSetCounter):
         self.core_cells = _core_cells
         self.cell_set_counter = _cell_set_counter
@@ -17,214 +18,105 @@ class CellSet:
             string += str(core_cell) + ' '
         string += str(self.cell_set_counter)
         return string
-    
+
     def get_unsolved_core_cells(self):
         """Returns unsolved core cells"""
         return [core_cell for core_cell in self.core_cells if not core_cell.is_solved()]
-
-    def get_solved_core_cells(self):
-        return [core_cell for core_cell in self.core_cells if core_cell.is_solved()]
-
-    def get_num_voltorbs_in_play(self):
-        """Returns # of voltorbs already known & solved in this cell set"""
-        return len([n for n in self.core_cells if n.options == [0]])
-
-    def get_current_value_in_play(self):
-        """Returns the amount of value the CellSet currently has amongst solved cells"""
-        solved_core_cells = self.get_solved_core_cells()
-        value = 0
-        for solved_core_cell in solved_core_cells:
-            value += solved_core_cell.options[0] #solved cell has only 1 option- the current value
-        return value
 
     def current_options(self):
         """
         Returns all possible options any cell in the set can have
         [0,1] & [2,3] -> [0,1,2,3]
         """
-        distinct = set()
-        for core_cell in self.core_cells:
-            for option in core_cell.options:
-                distinct.add(option)
-        return list(distinct)
+        return sorted({option for core_cell in self.core_cells for option in core_cell.options})
 
-    def get_count_of_options(self):
+    def arrangements(self) -> list[tuple[int, ...]]:
+        """Every assignment of one option per core cell that matches the counter"""
+        counter = self.cell_set_counter
+        return [
+            arrangement for arrangement in product(*(core_cell.options for core_cell in self.core_cells))
+            if sum(arrangement) == counter.value and arrangement.count(VOLTORB) == counter.voltorbs
+        ]
+
+    def update(self, do_log=False) -> bool:
         """
-        Returns the # of each option that are present somewhere in the core cells
-        Given:
-            cells: [0,1], [2], [2,1]
-        Returns: {
-            0: 1,
-            1: 2,
-            2: 2
-        }
-        """
-        result = dict()
-        for option in self.current_options():
-            if option==0:
-                continue
-            result[option] = 0
-            for cell in self.core_cells:
-                if option in cell.options:
-                    result[option] += 1
-        return result
-    
-    def update(self):
-        """
-        For a CellSet with n unsolved cells, v value, and z voltorbs
-            each unsolved cell has options from process_options_to_remove(v, n, z, set_options) removed
+        Reduces each core cell's options to those that appear in at least one arrangement matching the counter.
+        Solved cells take part like any other cell, so value/voltorbs already in play are accounted for.
+        Returns whether any cell changed; raises Contradiction when no arrangement exists.
         """
         before = str(self)
-        unsolved_cells = self.get_unsolved_core_cells()
-        v = self.cell_set_counter.value - self.get_current_value_in_play()
-        c = len(unsolved_cells)
-        z = self.cell_set_counter.voltorbs - self.get_num_voltorbs_in_play()
-        if v<0:
-            return
+        supported = supported_options(
+            [core_cell.options for core_cell in self.core_cells],
+            self.cell_set_counter.value,
+            self.cell_set_counter.voltorbs,
+        )
+        if supported is None:
+            raise Contradiction(f"no arrangement of [{before}] matches its counter")
+        changed = False
+        for core_cell, options in zip(self.core_cells, supported):
+            changed |= core_cell.set(options)
+        if changed:
+            log(f"CellSet.update() - Before: {before}, After: {self}", do_log=do_log)
+        return changed
 
-        # First, a CellSet wide check
-        if 0 <= v <= 2 * c:
-            count_of_options = self.get_count_of_options()
-            for option in self.current_options():
-                min_number_of_m_option = min_count_of_max(v, c, option)
-                if option!=0 and min_number_of_m_option == count_of_options[option]: #at least two 2's must exist and there are only 2 possible locations
-                    # therefore both spots should have options set to [2]
-                    for cell in self.core_cells:
-                        if option in cell.options:
-                            cell.set([option])
-                            log(f"set to option: {option}", do_log=True)
-        else:
-            options_to_remove = process_options_to_remove(
-                v=v, 
-                c=c,
-                z=z,
-                set_options=self.current_options()
-            )
-            for core_cell in unsolved_cells:
-                core_cell.update(options_to_remove)
-            after = str(self)
-            log(f"CellSet.update() - (v={v},c={c},z={z}) - Before: {before}, Removed: {options_to_remove}, After: {after}", do_log=True)
-        
 
-def min_count_of_max(v, c, m):
+def supported_options(domains: list[list[int]], value: int, voltorbs: int) -> list[list[int]] | None:
     """
-    Given v value that must be shared across c cells, returns the number of minimum m's
-    that must be in the solution
+    Given cells whose options are `domains`, that together must hold exactly `value` value and `voltorbs` voltorbs,
+    returns each cell's options reduced to the ones that appear in at least one valid arrangement,
+    or None if there is no valid arrangement.
+
+    An option o in cell i is supported when the cells before i can reach some (value, voltorbs) total
+    and the cells after i can reach exactly what remains once o is placed:
+        [0,1,2] [0,1,2], 4 value, 0 voltorbs -> 3 and 1 can't fit -> [2] [2]
     """
-    return max(0, v - c * (m - 1))
+    def step(totals, options):
+        return {
+            (v + o, z + (o == VOLTORB))
+            for v, z in totals for o in options
+            if v + o <= value and z + (o == VOLTORB) <= voltorbs
+        }
 
-"""
-rules:
-* each individual cell can have a value of 0, 1, 2, or 3, but not 4 or more
-* If 4 cell(s) must share 3 value across them and 2 cell(s) are a voltorb (0), then 2 cell(s) must share 3 value, meaning a (3, 0) or (2, 1), except there can't be a 3rd voltorb, therefore each cell has their options reduced to (2, 1) each
+    # prefix[i]: (value, voltorbs) totals reachable by cells [0, i); suffix[i]: by cells [i, n)
+    prefix = [{(0, 0)}]
+    for options in domains:
+        prefix.append(step(prefix[-1], options))
+    suffix = [{(0, 0)}]
+    for options in reversed(domains):
+        suffix.append(step(suffix[-1], options))
+    suffix.reverse()
 
-short: 'v value across a of b cells' 
-    -> 'a cells must share v value with each having 1 or more value each 
-        -> 'each of the b cells has their options reduced to <result>'
-
-These rules can definitely be derived formulaicly but I'm not there yet
-* x value across y cells with 0 voltorb(s): [1,2,3]
-
-* v value across c cells with z voltorb(s):
-
-* 1 value across 3 cell(s) with 1 voltorb(s): N/A
-"""
-def _process_new_options(v, c, z, set_options):
-    if v < 0:
+    if (value, voltorbs) not in prefix[-1]:
         return None
-    if v==0:
-        return [0]
-    if c==z:
+    return [
+        [
+            o for o in options
+            if any((value - v - o, voltorbs - z - (o == VOLTORB)) in suffix[i + 1] for v, z in prefix[i])
+        ]
+        for i, options in enumerate(domains)
+    ]
+
+@cache
+def _process_new_options(v, c, z, set_options: tuple[int, ...]):
+    supported = supported_options([list(set_options)] * c, v, z)
+    if supported is None:
         return None
-    if c<z:
-        return None
-    if v==c and z==0:
-        return [1]
-
-    if set_options is None:
-        return None
-
-    my_options = remove_options(set_options, [0]) # never try 0 below, all voltorbs already subtracted from options
-    
-    if c>z:
-        if c==1 and v in set_options: # 1 slot remains that has a possible value
-            return [v]
-
-        diff = c-z
-        if diff == v:
-            return [0,1]
-        if diff > v:
-            return None
-
-        # 3 value across 5 cell(s) with 4 voltorb(s): 3 NOT 0,1,2
-        #return [0] + new_options(v, diff, 0)
-        if z != 0:
-            log(f"z!=0")
-            potential_new_options = process_new_options(v, diff, 0, set_options)
-            if potential_new_options is not None:
-                return list(set([0] + potential_new_options))
-        
-        for this_option in set_options:
-            if c < this_option: # value is less than the option so it couldnt even fit it in one slot
-                log(f"removing {this_option}")
-                my_options = remove_options(my_options, [this_option]) # remove this_option
-            # attempt to place this_option in one slot- does it force any slots to be a 0? if so, this_option is removed
-            # 2 value across 2 cell(s) with 0 voltorbs, removed [3], down to [0,1,2], this_option==2
-            v2 = v-this_option #deduct the cost of the option from the remainder, now its
-            c2 = c-1 # use the slot for this_option
-            # 0 value across 1 cell(s)s with 0 voltorb(s): [0]
-            # 1 value across 1 cell with 0
-            log(f"trying value {v2} across {c2} cells with {z} voltorbs")
-            potential_new_options = process_new_options(v2, c2, z, set_options)
-            # returns a 0 therefore this_option is not possible
-            log(f"current options {my_options}")
-            if potential_new_options is None or 0 in potential_new_options:
-                log(f'this_option {this_option} wont work')
-                my_options = remove_options(my_options, [this_option])
-            else:
-                log(f"this_option {this_option} will work")
-                pass
-            log(f"remaining options {my_options}")
-            # otherwise the potential new option is at least possible and can continue
-
-        return my_options
-        
-    raise ValueError("idiot")
+    return sorted({option for options in supported for option in options})
 
 def process_new_options(v, c, z, set_options):
-    """Wrapper for _process_new_options that also caches the input/output and re-uses it"""
-    key = f"{v}-{c}-{z}-{set_options}" #flatten
-    if key in OPTIONS_CACHE:
-        return OPTIONS_CACHE[key]
-    result = _process_new_options(v, c, z, set_options)
-    OPTIONS_CACHE[key] = result
-    return result
+    """
+    v value across c cells with z voltorbs, where each cell may be any of set_options
+        -> every option some cell could still hold, or None if it can't be done
+    3 value across 3 cell(s) with 1 voltorb(s), [0,1,2,3] -> [0,1,2]
+    4 value across 2 cell(s) with 0 voltorb(s), [0,1,2] -> [2] (a 3 and a 1 isn't possible, so 2 and 2)
+    """
+    return _process_new_options(v, c, z, tuple(set_options))
 
 def process_options_to_remove(v, c, z, set_options):
     new_options = process_new_options(v, c, z, set_options)
-    #log(f"new_options: {new_options}", do_log=True)
     if new_options is None:
-        removed_options = set_options
-    else:
-        removed_options = [option for option in set_options if option not in new_options]
-    return removed_options
+        return list(set_options)
+    return [option for option in set_options if option not in new_options]
 
-def cache_to_disk():
-    with open(encoding='utf-8', mode='w', file='cache/options.txt') as f:
-        for key, options in OPTIONS_CACHE.items():
-            f.write(f"{key}: {options}\n")
-    
 def get_option_decision(v, c, z, set_options):
     return f"{v} value across {c} cell(s) with {z} voltorb(s): {process_new_options(v, c, z, set_options)}"
-
-if __name__ == '__main__': #for funzies
-    # try all
-    # for v in range(0, MAX_COIN_VALUE+1):
-    #     for c in range(1, GRID_SIZE+1):
-    #         for z in range(0, c+1):
-    #             log(get_option_decision(v, c, z), do_log=True)
-    set_options=[0,1,2]
-    # 4, 2, 0 [0,1,2] -> [2] correctly
-    remaining_options = process_new_options(6, 4, 0, set_options)
-    removed_options = process_options_to_remove(6, 4, 0, set_options)
-    print(f"remaining_options: {remaining_options}, removed_options: {removed_options}")
