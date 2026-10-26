@@ -3,4 +3,5 @@
 # for now
 output/
 
-scratch/
+scratch/__pycache__/
+.pytest_cache/

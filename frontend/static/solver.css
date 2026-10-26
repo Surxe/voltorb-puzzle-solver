@@ -1,0 +1,197 @@
+/* Sizes are in art pixels; #app's zoom scales everything by a whole number so the sprites stay crisp. */
+@font-face {
+  font-family: 'Silkscreen';
+  src: url('fonts/Silkscreen-Regular.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Silkscreen';
+  font-weight: bold;
+  src: url('fonts/Silkscreen-Bold.ttf') format('truetype');
+}
+
+:root {
+  --zoom: 3;
+  --page: #143a26;
+  --felt: #2b9a5a;
+  --edge: #0e2f1d;
+  --paper: #f2dfb8;
+  --ink: #2b2b33;
+  --light: #f4f1e6;
+  --gold: #ffd84a;
+  --cursor: #ff4d3a;
+  --card: 24px;
+  --pitch: 32px; /* card + gap */
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--page);
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start; /* #app keeps its own height, which fit() measures */
+  font-family: 'Silkscreen', monospace;
+  font-size: 8px;
+  line-height: 9px;
+  color: var(--ink);
+  -webkit-font-smoothing: none;
+}
+
+img { display: block; image-rendering: pixelated; }
+
+input {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+}
+
+#app {
+  zoom: var(--zoom);
+  display: flex;
+  gap: 8px;
+  padding: 4px;
+  align-items: flex-start;
+}
+#app.stacked { flex-direction: column; align-items: center; }
+
+/* ---- console: status bar over the board ---- */
+.console {
+  flex: none;
+  border: 2px solid var(--edge);
+}
+
+.status {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 8px;
+  padding: 4px 6px;
+  background: var(--edge);
+  color: #d9f2e2;
+}
+.status h1 { margin: 0; font-size: inherit; font-weight: bold; }
+.status p { margin: 0; }
+.status output { font-weight: bold; color: var(--gold); }
+.level input {
+  width: 9px;
+  border-bottom: 1px solid #d9f2e2;
+  text-align: center;
+  font-weight: bold;
+  color: var(--gold);
+}
+.level input:focus { border-bottom-color: var(--cursor); }
+
+.board {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(calc(var(--size) + 1), var(--card));
+  grid-template-rows: repeat(calc(var(--size) + 1), var(--card));
+  gap: calc(var(--pitch) - var(--card));
+  padding: 8px;
+  background: var(--felt);
+}
+
+.line { position: absolute; background: var(--color); }
+.row-line { left: 8px; top: calc(8px + var(--n) * var(--pitch) + 11px); width: calc(var(--size) * var(--pitch)); height: 2px; }
+.col-line { top: 8px; left: calc(8px + var(--n) * var(--pitch) + 11px); height: calc(var(--size) * var(--pitch)); width: 2px; }
+
+/* ---- cards ---- */
+.tile { position: relative; width: var(--card); height: var(--card); }
+.tile > * { position: absolute; }
+.tile .face { left: 0; top: 0; }
+.tile .memo { display: none; }
+.tile .memo-0 { left: 2px; top: 2px; }
+.tile .memo-1 { left: 17px; top: 2px; }
+.tile .memo-2 { left: 2px; top: 17px; }
+.tile .memo-3 { left: 17px; top: 17px; }
+.tile.can-0 .memo-0, .tile.can-1 .memo-1, .tile.can-2 .memo-2, .tile.can-3 .memo-3 { display: block; }
+.tile.previewing .memo { display: none; }
+
+.tile .odds {
+  left: 0; top: 8px; width: var(--card);
+  line-height: 8px;
+  text-align: center;
+  color: #fff;
+  text-shadow: 1px 1px 0 var(--edge);
+  pointer-events: none;
+}
+.tile.previewing .odds, .tile.revealed .odds { display: none; }
+
+/* red: a card to flip; gold: the one being typed into. Raised so neither is drawn under a neighbor. */
+.tile.pending { z-index: 1; }
+.tile.pending:focus-within { z-index: 2; }
+.tile .cursor { left: -3px; top: -3px; display: none; pointer-events: none; }
+.tile.pending .cursor:not(.focus-cursor) { display: block; }
+.tile.pending:focus-within .cursor:not(.focus-cursor) { display: none; }
+.tile.pending:focus-within .focus-cursor { display: block; }
+
+/* what's typed shows as the card face, so the input itself stays invisible */
+.tile .flip { left: 0; top: 0; width: var(--card); height: var(--card); color: transparent; caret-color: transparent; cursor: text; }
+.tile .flip::selection { background: transparent; }
+.tile .flip:disabled { pointer-events: none; }
+.flipping .tile:not(.revealed):not(.pending) { cursor: pointer; }
+
+/* ---- counters: points over a bomb and the Voltorb count ---- */
+.counter {
+  position: relative;
+  width: var(--card);
+  height: var(--card);
+  background: var(--color);
+  border: 1px solid var(--light);
+  font-weight: bold;
+}
+.counter::after { content: ''; position: absolute; left: 0; right: 0; top: 10px; height: 1px; background: var(--light); }
+.counter > * { position: absolute; }
+.count { height: 9px; line-height: 9px; text-align: right; }
+/* the box being typed into turns gold, ringed in ink, above the panel's divider */
+.count:focus { z-index: 1; background: var(--gold); box-shadow: 0 0 0 1px var(--ink); }
+.count::selection { background: var(--ink); color: var(--gold); }
+.count.value { left: 1px; top: 1px; width: 20px; }
+.count.voltorbs { left: 12px; top: 12px; width: 9px; }
+.counter .bomb { left: 1px; top: 11px; }
+
+/* ---- side panel: message box and menu ---- */
+.panel {
+  flex: none;
+  width: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.stacked .panel { width: 204px; }
+
+.dialogue {
+  min-height: 72px;
+  padding: 4px 5px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: inset -2px -2px 0 #d6bb8a;
+}
+.dialogue p { margin: 0; white-space: pre-line; }
+
+.menu { display: flex; flex-direction: column; gap: 3px; }
+.action {
+  height: 16px;
+  padding: 0;
+  border: 2px solid var(--ink);
+  background: #9fd9b7;
+  box-shadow: inset -2px -2px 0 #6db88d;
+  font: inherit;
+  font-weight: bold;
+  color: var(--ink);
+  cursor: pointer;
+}
+.action:enabled:hover { border-color: var(--cursor); }
+.action:focus { outline: none; border-color: var(--cursor); background: var(--gold); }
+.action:disabled { background: #6aa583; box-shadow: none; cursor: default; }
+
+.hint { margin: 0; color: #bfe3cd; }
