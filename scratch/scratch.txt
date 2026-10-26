@@ -1,0 +1,22 @@
+(v, c, z)
+(6, 5, 1) ==
+(6, 4, 0)
+(3, 3, 0) == [1]
+therefore 6-5-1 / 6-4-0 can have a 3
+
+BUT if the predefined options are [0,1,2]
+then we shouldnt be trying a 3 regardless
+wherein we land on 2
+
+
+but can't have a 3 -> must have two 2's 
+    -> if the set has exactly two 2 slots, 
+    fill them in
+
+(6, 5, 1, [0,1,2]) ->
+(6, 4, 0, [0,1,2]) -> at least two 2's
+
+try option=1
+(5, 3, 0, [0,1,2]) -> 
+
+(4, 2, 0, [0,1,2]) -> [2]

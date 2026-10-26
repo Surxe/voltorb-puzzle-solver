@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Voltorb Flip Solver</title>
+  <link rel="icon" href="{{ url_for('static', filename='sprites/favicon.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='solver.css') }}">
+</head>
+<body>
+  {#- Sizes are in art pixels (a card is 24x24); the whole app is zoomed by a whole number to keep the pixels crisp. -#}
+  {%- set colors = ['#e8704f', '#45b04a', '#eda43a', '#3f8fe8', '#b867e0'] -%}
+  <main id="app" aria-busy="false" data-size="{{ size }}" data-sprites="{{ url_for('static', filename='sprites/') }}">
+    <section class="console">
+      <header class="status">
+        <h1>Voltorb Flip Solver</h1>
+        <label class="level">Lv <input id="level" inputmode="numeric" maxlength="1" autocomplete="off"
+               aria-label="Level shown in game (1-{{ levels }}, blank if unknown)" title="Lv. shown in game (blank: any)"></label>
+        <p class="coins">Coins <output id="current-coins">00000</output></p>
+        <p class="coins">Total <output id="total-coins">00000</output></p>
+      </header>
+
+      <div class="board" style="--size: {{ size }}">
+        {#- each row and column has a color; its line runs behind its cards into its counter -#}
+        {% for n in range(size) %}
+        <div class="line row-line" style="--n: {{ n }}; --color: {{ colors[n % colors | length] }}"></div>
+        <div class="line col-line" style="--n: {{ n }}; --color: {{ colors[n % colors | length] }}"></div>
+        {% endfor %}
+
+        {#- solver.js decides what Tab cycles through in each phase -#}
+        {% for i in range(size) %}{% for j in range(size) %}
+        <div class="tile" data-i="{{ i }}" data-j="{{ j }}" style="grid-row: {{ i + 1 }}; grid-column: {{ j + 1 }}">
+          <img class="face" src="{{ url_for('static', filename='sprites/card_back.png') }}" alt="">
+          {% for k in range(4) %}<img class="memo memo-{{ k }}" src="{{ url_for('static', filename='sprites/memo_%d.png' % k) }}" alt="">{% endfor %}
+          <span class="odds"></span>
+          <img class="cursor" src="{{ url_for('static', filename='sprites/cursor.png') }}" alt="">
+          <img class="cursor focus-cursor" src="{{ url_for('static', filename='sprites/cursor_focus.png') }}" alt="">
+          <input class="flip" inputmode="numeric" maxlength="1" autocomplete="off" disabled
+                 aria-label="Row {{ i + 1 }} column {{ j + 1 }}: what the card showed (0 for a Voltorb)">
+        </div>
+        {% endfor %}{% endfor %}
+
+        {% for line, name in (('row', 'Row'), ('col', 'Column')) %}{% for n in range(size) %}
+        {%- set cell = (n + 1, size + 1) if line == 'row' else (size + 1, n + 1) %}
+        <div class="counter" style="grid-row: {{ cell[0] }}; grid-column: {{ cell[1] }}; --color: {{ colors[n % colors | length] }}">
+          <input class="count value" data-line="{{ line }}" data-n="{{ n }}"
+                 inputmode="numeric" maxlength="2" autocomplete="off" aria-label="{{ name }} {{ n + 1 }} points">
+          <img class="bomb" src="{{ url_for('static', filename='sprites/bomb_small.png') }}" alt="">
+          <input class="count voltorbs" data-line="{{ line }}" data-n="{{ n }}"
+                 inputmode="numeric" maxlength="1" autocomplete="off" aria-label="{{ name }} {{ n + 1 }} Voltorbs">
+        </div>
+        {% endfor %}{% endfor %}
+      </div>
+    </section>
+
+    <aside class="panel">
+      <div class="dialogue"><p id="message" role="status" aria-live="polite"></p></div>
+      <nav class="menu" aria-label="Actions">
+        {% for k in range(3) %}<button type="button" class="action"></button>{% endfor %}
+      </nav>
+      <p class="hint">Tab: next box (only the ones that need you). Enter: submit.<br>Corner marks: what a card can still be. Middle: its Voltorb chance. Click a face-down card to enter a flip yourself.</p>
+    </aside>
+  </main>
+  <script src="{{ url_for('static', filename='solver.js') }}"></script>
+</body>
+</html>

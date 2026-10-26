@@ -1,0 +1,7 @@
+*.pyc
+
+# for now
+output/
+
+scratch/__pycache__/
+.pytest_cache/
